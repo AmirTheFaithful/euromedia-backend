@@ -10,6 +10,7 @@ export const sys = {
 
 export const mongo = {
   uri: process.env.MONGO_URI!,
+  test_uri: process.env.TEST_MONGO_URI!,
 };
 
 export const eml = {
