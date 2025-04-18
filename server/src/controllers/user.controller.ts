@@ -10,6 +10,7 @@ import {
   Queries,
   Body,
 } from "../use-cases/user.use-case";
+import { cache } from "../config/lru";
 
 type ResponseBody<DataType> = {
   data: DataType;
@@ -24,7 +25,15 @@ class UserController {
     ) => {
       const fetchUserUseCase = UserContainer.get(FetchUserUseCase);
       const data: User | Users = await fetchUserUseCase.execute(req.query);
-      res.status(200).json({ data, message: "Fetch success." }).end();
+
+      let responseMessage: string = "Fetch success.";
+
+      // If fetched a cached user - report it into the response.
+      if (cache.has(req.query.id ? req.query.id : req.query.email!)) {
+        responseMessage += " (cached)";
+      }
+
+      res.status(200).json({ data, message: responseMessage }).end();
     }
   );
 
