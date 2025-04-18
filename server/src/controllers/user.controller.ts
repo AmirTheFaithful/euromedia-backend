@@ -27,10 +27,14 @@ class UserController {
       const data: User | Users = await fetchUserUseCase.execute(req.query);
 
       let responseMessage: string = "Fetch success.";
+      const cachedKey: string = req.query.id ?? req.query.email!;
 
-      // If fetched a cached user - report it into the response.
-      if (cache.has(req.query.id ? req.query.id : req.query.email!)) {
+      // If a cached user was fetched - reflect that in the response and send a specific header..
+      if (cache.has(cachedKey)) {
         responseMessage += " (cached)";
+        res.setHeader("X-Cache-Status", "HIT");
+      } else {
+        res.setHeader("X-Cache-Status", "MISS");
       }
 
       res.status(200).json({ data, message: responseMessage }).end();
