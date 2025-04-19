@@ -66,7 +66,6 @@ export class FetchUserUseCase extends UserUseCase {
       throw new NotFoundError(`User with id "${id}" does not exist.`);
     }
 
-    cache.set(query, user);
     return user;
   }
 
@@ -80,7 +79,6 @@ export class FetchUserUseCase extends UserUseCase {
       throw new NotFoundError();
     }
 
-    cache.set(email, user);
     return user;
   }
 
