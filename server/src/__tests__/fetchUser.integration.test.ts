@@ -9,6 +9,7 @@ import { User } from "../types/user.type";
 // Initialize mock app and model.
 const testApp = app();
 const testModel = new UserModel().model;
+const baseURL: string = "/api/users";
 let dummyUser: User;
 
 jest.setTimeout(16000); // Increase testing estimated timeout to survive slow asynchronous operations.
@@ -35,8 +36,6 @@ afterAll(async (): Promise<void> => {
   await testModel.deleteMany();
   await connection.close();
 });
-
-const baseURL: string = "/api/users";
 
 // Tests using id as query:
 describe("GET user by id.", () => {
@@ -74,6 +73,14 @@ describe("GET user by id.", () => {
     );
 
     expect(response.statusCode).toBe(404);
+  });
+
+  it("should return '400 bad request' error, when taken invalid id", async () => {
+    const response: Response = await request(testApp).get(
+      `${baseURL}?id=something-as-a-wrong-id`
+    );
+
+    expect(response.statusCode).toBe(400);
   });
 });
 
@@ -113,5 +120,38 @@ describe("GET user by email.", () => {
     );
 
     expect(response.statusCode).toBe(404);
+  });
+
+  it("should return '400 bad request' error, when taken invalid email", async () => {
+    const response: Response = await request(testApp).get(
+      `${baseURL}?email=something-as-a-wrong-email`
+    );
+
+    expect(response.statusCode).toBe(400);
+  });
+});
+
+describe("GET all users present in the DB.", () => {
+  it("should return all users in the DB.", async (): Promise<void> => {
+    const response = await request(testApp).get(baseURL);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe("Fetch success.");
+    expect(response.body.data).toBeInstanceOf(Array);
+    expect(response.body.data.length).toBeGreaterThan(0);
+    expect(response.body.data[0].meta).toEqual(dummyUser.meta);
+    expect(response.body.data[0].auth).toEqual(dummyUser.auth);
+  });
+
+  it("should return empty array.", async (): Promise<void> => {
+    // Cleanup the cluster to make sure that DB is completelly empty.
+    await testModel.deleteMany();
+
+    const response = await request(testApp).get(baseURL);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe("Fetch success.");
+    expect(response.body.data).toBeInstanceOf(Array);
+    expect(response.body.data.length).toBe(0);
   });
 });
