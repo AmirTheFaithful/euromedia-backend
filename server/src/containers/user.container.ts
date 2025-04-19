@@ -7,6 +7,7 @@ import UserService from "../services/user.service";
 import {
   FetchUserUseCase,
   UpdateUserUseCase,
+  DeleteUserUseCase,
 } from "../use-cases/user.use-case";
 
 export default (container: Container): void => {
@@ -16,7 +17,5 @@ export default (container: Container): void => {
 
   container.bind(FetchUserUseCase).toSelf();
   container.bind(UpdateUserUseCase).toSelf();
+  container.bind(DeleteUserUseCase).toSelf();
 };
-
-// DeleteUserUseCase,
-// container.bind(DeleteUserUseCase).toSelf();

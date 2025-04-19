@@ -6,4 +6,5 @@ export const userRoutes = (router: Router): void => {
   const baseURL: string = "/api/users";
   router.get(baseURL, userController.getUsers);
   router.patch(baseURL, userController.updateUser);
+  router.delete(baseURL, userController.deleteUser);
 };
