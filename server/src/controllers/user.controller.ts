@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import UserContainer from "../containers/user-di";
+import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
 import { User, Users } from "../types/user.type";
 import {
@@ -18,12 +18,14 @@ type ResponseBody<DataType> = {
 };
 
 class UserController {
+  constructor(private readonly container = Container()) {}
+
   public getUsers = asyncHandler(
     async (
       req: Request<any, User | User, any, Queries>,
       res: Response<ResponseBody<User | Users>>
     ) => {
-      const fetchUserUseCase = UserContainer.get(FetchUserUseCase);
+      const fetchUserUseCase = this.container.get(FetchUserUseCase);
       const data: User | Users = await fetchUserUseCase.execute(req.query);
 
       let responseMessage: string = "Fetch success.";
@@ -35,6 +37,7 @@ class UserController {
         res.setHeader("X-Cache-Status", "HIT");
       } else {
         res.setHeader("X-Cache-Status", "MISS");
+        cache.set(cachedKey, data); // Cache the user.
       }
 
       res.status(200).json({ data, message: responseMessage }).end();
@@ -46,14 +49,14 @@ class UserController {
       req: Request<any, User, Body, Queries>,
       res: Response<ResponseBody<User>>
     ) => {
-      const updateUserUseCase = UserContainer.get(UpdateUserUseCase);
+      const updateUserUseCase = this.container.get(UpdateUserUseCase);
       const data: User = await updateUserUseCase.execute(req.query, req.body);
       res.status(200).json({ data, message: "Update success." }).end();
     }
   );
 
   public deleteUser = asyncHandler(async (req: Request, res: Response) => {
-    const deleteUserUseCase = UserContainer.get(DeleteUserUseCase);
+    const deleteUserUseCase = this.container.get(DeleteUserUseCase);
     const data: User = await deleteUserUseCase.execute(req.query);
     res.status(200).json({ data, message: "Deletion success." }).end();
   });
