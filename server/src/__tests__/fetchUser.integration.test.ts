@@ -1,5 +1,6 @@
 import { connect, connection } from "mongoose";
 import request, { Response } from "supertest";
+import { Application } from "express";
 
 import app from "../setup/app";
 import { mongo } from "../config/env";
@@ -7,7 +8,7 @@ import UserModel from "../models/user.model";
 import { User } from "../types/user.type";
 
 // Initialize mock app and model.
-const testApp = app();
+let testApp: Application;
 const testModel = new UserModel().model;
 const baseURL: string = "/api/users";
 let dummyUser: User;
@@ -17,6 +18,9 @@ jest.setTimeout(16000); // Increase testing estimated timeout to survive slow as
 // Connect to the test DB and set a dummy user object to the cluster.
 beforeAll(async (): Promise<void> => {
   await connect(mongo.test_uri);
+  await testModel.deleteMany();
+
+  testApp = app();
 
   dummyUser = await new testModel({
     meta: {
@@ -33,7 +37,6 @@ beforeAll(async (): Promise<void> => {
 
 // Cleanup the cluster after all tests.
 afterAll(async (): Promise<void> => {
-  await testModel.deleteMany();
   await connection.close();
 });
 
