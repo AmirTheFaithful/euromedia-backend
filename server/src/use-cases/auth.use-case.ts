@@ -87,10 +87,10 @@ export class RegisterUseCase extends AuthUseCase {
       },
     });
 
-    await newUser.save();
-
     // Send verification token as link to the user's email:
     await this.sendVerificationEmail(newUser._id as ObjectId, email);
+
+    await newUser.save();
   }
 
   // Validate request body:
