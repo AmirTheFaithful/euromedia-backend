@@ -2,18 +2,19 @@ import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
 /**
- * Represents a user's reaction to a unit of content (e.g., a post, comment, etc...).
+ * Represents a user's reaction to a unit of content (e.g., a post, comment, etc.).
  *
- * This interface extends Mongoose's `Document` type, enabling access to built-in methods
- * such as `.save()`, `.remove()`, and versioning metadata.
+ * Extends Mongoose's `Document` interface to inherit model methods and metadata.
  *
- * Fields:
- * - `authorId`: MongoDB ObjectId of the user who created the reaction.
- * - `targetId`: MongoDB ObjectId of the content unit (e.g., a post, an comment, etc...), this reaction related to.
- * - `emoji`: The emoji symbol used as the reaction (e.g., "👍", "🔥").
- * - `updated`: Flag indicating whether the reaction was edited or changed post-creation.
- * - `createdAt`: Timestamp when the reaction was initially created.
- * - `updatedAt`: Timestamp of the last update to the reaction.
+ * @interface Reaction
+ * @extends Document
+ *
+ * @property {ObjectId} authorId - The MongoDB ObjectId of the user who created the reaction.
+ * @property {ObjectId} targetId - The MongoDB ObjectId of the content item being reacted to (e.g., post, comment).
+ * @property {string} emoji - The emoji used for the reaction (e.g., "👍", "🔥").
+ * @property {boolean} updated - Indicates whether the reaction was edited after creation.
+ * @property {Date} createdAt - Timestamp indicating when the reaction was created.
+ * @property {Date} updatedAt - Timestamp of the last time the reaction was updated.
  */
 export interface Reaction extends Document {
   authorId: ObjectId;
@@ -25,8 +26,10 @@ export interface Reaction extends Document {
 }
 
 /**
- * An array of `Reaction` documents.
- * Useful for representing collections of reactions in response aggregations,
- * analytics, or batch operations.
+ * Represents a collection of `Reaction` documents.
+ *
+ * Useful for handling multiple reactions in aggregations, analytics, or batch operations.
+ *
+ * @typedef {Reaction[]} Reactions
  */
 export type Reactions = Reaction[];
