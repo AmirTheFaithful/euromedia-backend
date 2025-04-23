@@ -6,6 +6,8 @@ export interface User extends Document {
   location?: UserLocation;
 }
 
+export type Users = User[];
+
 export interface UserMeta {
   firstname: string;
   lastname: string;
@@ -22,17 +24,13 @@ export interface UserLocation {
   city: string;
 }
 
-export type Users = Array<User>;
-
-export interface UpdateUserDTO {
-  firstname?: string;
-  lastname?: string;
-  password?: string;
-  country?: string;
-  city?: string;
-}
-
 export interface CreateUserDTO {
-  meta: UserMeta;
-  auth: UserAuth;
+  firstname: string;
+  lastname: string;
+  email: string;
+  password: string;
 }
+
+export type UpdateUserDTO = Partial<
+  Omit<CreateUserDTO, "email"> & UserLocation
+>;
