@@ -16,6 +16,12 @@ export type PostBlock = {
 };
 
 /**
+ * An array of PostBlock elements.
+ * Used for representing multiple structured content units within a post.
+ */
+export type PostBlocks = PostBlocks[];
+
+/**
  * Represents a post in the system.
  * The 'Post' extends the Mongoose Document, meaning it will contain methods like `.save()` and `.remove()`.
  *
@@ -40,5 +46,36 @@ export interface Post extends Document {
   updated: boolean;
   updatedAt: Date;
   tags: Array<string>;
-  blocks: Array<PostBlock>;
+  blocks: PostBlocks;
 }
+
+/**
+ * An array of posts entites.
+ * Useful for batch operations and query results.
+ */
+export type Posts = Post[];
+
+/**
+ * Data Transfer Object for creating a new post.
+ * Used when submitting data from the client to the server during post creation.
+ *
+ * @typedef {Object} CreatePostDTO
+ * @property {ObjectId} authorId - The ID of the user creating the post.
+ * @property {string} title - The title of the new post.
+ * @property {PostBlocks} blocks - Content blocks comprising the body of the post.
+ * @property {string[]=} tags - Optional tags to be associated with the post.
+ */
+export type CreatePostDTO = {
+  authorId: ObjectId;
+  title: string;
+  blocks: PostBlocks;
+  tags?: Array<string>;
+};
+
+/**
+ * Data Transfer Object for updating an existing post.
+ * All fields are optional, and 'authorId' is intentionally excluded.
+ *
+ * Typically used in PATCH requests to modify an existing post.
+ */
+export type UpdatePostDTO = Partial<Omit<CreatePostDTO, "authorId">>;
