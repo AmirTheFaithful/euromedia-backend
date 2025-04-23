@@ -32,18 +32,13 @@ export type PostBlock = {
  * @property {Array<string>} meta.tags - Tags associated with the post.
  * @property {Object} content - The actual content of the post.
  * @property {string} content.title - The title of the post.
- * @property {Array<PostBlock>} content.blocks - An array of content blocks in the post.
+ * @property {PostBlocks} content.blocks - An array of content blocks in the post.
  */
 export interface Post extends Document {
-  meta: {
-    authorId: ObjectId;
-    createdAt: Date;
-    updated: boolean;
-    updatedAt: Date;
-    tags: Array<string>;
-  };
-  content: {
-    title: string;
-    blocks: Array<PostBlock>;
-  };
+  authorId: ObjectId;
+  createdAt: Date;
+  updated: boolean;
+  updatedAt: Date;
+  tags: Array<string>;
+  blocks: Array<PostBlock>;
 }
