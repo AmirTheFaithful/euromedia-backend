@@ -19,7 +19,7 @@ export type PostBlock = {
  * An array of PostBlock elements.
  * Used for representing multiple structured content units within a post.
  */
-export type PostBlocks = PostBlocks[];
+export type PostBlocks = PostBlock[];
 
 /**
  * Represents a post in the system.
