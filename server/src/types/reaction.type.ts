@@ -45,7 +45,7 @@ export type SadReactions = "bored" | "sad" | "cry" | "zithannya";
  *
  * @typedef {"dislike" | "angry" | "hate" | "shame"} NegativeReactions
  */
-export type NegativeReactions = "dilike" | "angry" | "hate" | "shame";
+export type NegativeReactions = "dislike" | "angry" | "hate" | "shame";
 
 /**
  * Represents a user's reaction to a unit of content (e.g., a post, comment, etc.).
