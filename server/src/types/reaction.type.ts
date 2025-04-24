@@ -2,6 +2,52 @@ import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
 /**
+ * Describes the kind of reaction or emotion of the user to a content unit (e.g., a post, comment, etc.).
+ *
+ * Each category of reactions contiains four separate reaction units to describe user's emotion.
+ * Categories:
+ * - {@link PositiveReactions}
+ * - {@link AttractiveReactions}
+ * - {@link SadReactions}
+ * - {@link NegativeReactions}
+ *
+ * @typedef {PositiveReactions | AttractiveReactions | SadReactions | NegativeReactions} ReactionType
+ */
+export type ReactionType =
+  | PositiveReactions
+  | AttractiveReactions
+  | SadReactions
+  | NegativeReactions;
+
+/**
+ * Positive reactions expressing joy, humor, or general approval.
+ *
+ * @typedef {"like" | "smile" | "fun" | "laugh"} PositiveReactions
+ */
+export type PositiveReactions = "like" | "smile" | "fun" | "laugh";
+
+/**
+ * Reactions expressing strong positive emotions or excitement.
+ *
+ * @typedef {"love" | "happy" | "amazed" | "scared"} AttractiveReactions
+ */
+export type AttractiveReactions = "love" | "happy" | "amazed" | "scared";
+
+/**
+ * Reactions representing sadness, boredom, or emotional vulnerability.
+ *
+ * @typedef {"bored" | "sad" | "cry" | "zithannya"} SadReactions
+ */
+export type SadReactions = "bored" | "sad" | "cry" | "zithannya";
+
+/**
+ * Negative reactions expressing dissatisfaction or disapproval.
+ *
+ * @typedef {"dislike" | "angry" | "hate" | "shame"} NegativeReactions
+ */
+export type NegativeReactions = "dilike" | "angry" | "hate" | "shame";
+
+/**
  * Represents a user's reaction to a unit of content (e.g., a post, comment, etc.).
  *
  * Extends Mongoose's `Document` interface to inherit model methods and metadata.
@@ -19,7 +65,7 @@ import { ObjectId } from "mongodb";
 export interface Reaction extends Document {
   authorId: ObjectId;
   targetId: ObjectId;
-  emoji: string;
+  type: ReactionType;
   updated: boolean;
   createdAt: Date;
   updatedAt: Date;
