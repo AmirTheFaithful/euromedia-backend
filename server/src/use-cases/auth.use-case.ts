@@ -76,15 +76,10 @@ export class RegisterUseCase extends AuthUseCase {
 
     // Create a new user account into DB:
     const newUser = await this.service.createNewUser({
-      meta: {
-        firstname,
-        lastname,
-      },
-      auth: {
-        email,
-        password: await this.hashPassword(password),
-        verified: false,
-      },
+      firstname,
+      lastname,
+      email,
+      password: await this.hashPassword(password),
     });
 
     // Send verification token as link to the user's email:
