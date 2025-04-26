@@ -11,5 +11,5 @@ export const authRoutes = (router: Router): void => {
     baseURL + "to-reset-password",
     AuthController.resetPasswordRequest
   );
-  router.patch(baseURL + "reset-password/:token", AuthController.resetPassword);
+  router.patch(baseURL + "reset-password", AuthController.resetPassword);
 };
