@@ -40,7 +40,13 @@ class AuthController {
   public resetPasswordRequest = asyncHandler(
     async (req: Request, res: Response) => {
       const container = this.container.get(ResetPasswordRequestUseCase);
-      await container.execute(req.body);
+
+      // Retrieve verification token from the use-case,
+      const token = await container.execute(req.body);
+
+      // And set it to the response headers.
+      res.setHeader("Authorization", token);
+
       res
         .status(200)
         .json({ message: "Resetting password rquest accepted." })
@@ -50,7 +56,9 @@ class AuthController {
 
   public resetPassword = asyncHandler(async (req: Request, res: Response) => {
     const container = this.container.get(ResetPasswordUseCase);
-    await container.execute(req.body);
+
+    // Provide request headers as well as body to the use-case to verify the token.
+    await container.execute(req.body, req.headers);
     res.status(200).json({ message: "Password reset success." }).end();
   });
 }
