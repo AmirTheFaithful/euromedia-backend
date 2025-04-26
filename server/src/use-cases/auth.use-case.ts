@@ -4,6 +4,7 @@ import { genSalt, hash, compare } from "bcrypt";
 import { createTransport } from "nodemailer";
 import { ObjectId } from "mongodb";
 import { sign, verify, JwtPayload } from "jsonwebtoken";
+import { IncomingHttpHeaders } from "http";
 
 import { User, CreateUserDTO } from "../types/user.type";
 import { Params, LoginRequestBody } from "../types/auth.type";
@@ -12,6 +13,7 @@ import {
   ConflictError,
   BadRequestError,
   NotFoundError,
+  UnauthorizedError,
 } from "../errors/http-errors";
 import { sys, jwt, eml } from "../config/env";
 
@@ -164,7 +166,7 @@ export class ResetPasswordRequestUseCase extends AuthUseCase {
     super(service);
   }
 
-  public async execute(input: { email: string }) {
+  public async execute(input: { email: string }): Promise<string> {
     const { email } = this.schema.parse(input);
 
     // If the user exists, assign to global user object and continue, throw "not found" error otherwise.
@@ -175,14 +177,12 @@ export class ResetPasswordRequestUseCase extends AuthUseCase {
       expiresIn: "1h",
     });
 
-    this.sendResetPasswordEmail(email, token);
+    this.sendResetPasswordEmail(email);
+    return token;
   }
 
-  private async sendResetPasswordEmail(
-    email: string,
-    token: string
-  ): Promise<void> {
-    const resetPasswordLink: string = `${sys.host}:${sys.servPort}/auth/reset-password/${token}`;
+  private async sendResetPasswordEmail(email: string): Promise<void> {
+    const resetPasswordLink: string = `${sys.host}:${sys.servPort}/auth/reset-password`;
 
     await this.transporter.sendMail({
       from: eml.adr,
@@ -210,14 +210,33 @@ export class ResetPasswordUseCase extends AuthUseCase {
     super(service);
   }
 
-  public async execute(input: LoginRequestBody) {
+  public async execute(input: LoginRequestBody, headers: IncomingHttpHeaders) {
     const { email, password } = this.loginSchema.parse(input);
+    const emailUser: User = await this.checkExistence(email, "absence");
+
+    if (!emailUser) {
+      throw new NotFoundError(`User not found with email '${email}'.`);
+    }
+
+    const token = headers["authorization"];
+
+    if (!token) {
+      throw new UnauthorizedError("Verification token missing.");
+    }
+
+    const payload = verify(token, jwt.eml) as JwtPayload;
+    const id: ObjectId = payload.id;
+
+    const idUser = await this.service.getUserById(id);
+
+    if (!idUser) {
+      throw new NotFoundError("User not found.");
+    }
 
     const hash = await this.hashPassword(password);
-    const user: User = await this.checkExistence(email, "absence");
 
-    user.auth.password = hash;
-    await user.save();
+    idUser.auth.password = hash;
+    await idUser.save();
   }
 }
 
