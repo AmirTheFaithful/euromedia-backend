@@ -20,18 +20,13 @@ export default class PostRepository {
 
   // Resturn all posts by their author's ID.
   public async getPostsByAuthorId(authorId: ObjectId): Promise<Posts> {
-    return this.model.instance.find({ "meta.authorId": authorId });
-  }
-
-  // Return a post by its title.
-  public async getPostByTitle(title: string): Promise<Post | null> {
-    return this.model.instance.findOne({ "content.title": title });
+    return this.model.instance.find({ authorId });
   }
 
   // Get all posts by tags specified in their metadata.
   public async getPostsByTags(tags: Array<string>): Promise<Posts> {
     return this.model.instance.find({
-      "meta.tags": { $in: tags },
+      tags: { $in: tags },
     });
   }
 
