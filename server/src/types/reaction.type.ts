@@ -79,3 +79,20 @@ export interface Reaction extends Document {
  * @typedef {Reaction[]} Reactions
  */
 export type Reactions = Reaction[];
+
+/**
+ * Represents an object with fields required to create a new reaction.
+ *
+ * @typedef {Omit<Reaction, "updated" | "createdAt">} CreateReactionDTO.
+ */
+export type CreateReactionDTO = Omit<Reaction, "updated" | "createdAt">;
+
+/**
+ * Represents an object with fields allowed to be modified.
+ *
+ * @typedef {Pick<Reaction, "type" | "updated" | "updatedAt">} UpdateReactionDTO
+ */
+export type UpdateReactionDTO = Pick<
+  Reaction,
+  "type" | "updated" | "updatedAt"
+>;
