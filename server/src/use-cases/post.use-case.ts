@@ -2,7 +2,13 @@ import { injectable, inject } from "inversify";
 import { ObjectId } from "mongodb";
 
 import PostService from "../services/post.service";
-import { Post, Posts } from "../types/post.type";
+import {
+  Post,
+  Posts,
+  PostBlocks,
+  CreatePostDTO,
+  UpdatePostDTO,
+} from "../types/post.type";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
 import { cache } from "../config/lru";
 
@@ -116,5 +122,49 @@ export class FetchPostUseCase extends PostUseCase {
    */
   public async getAllPosts(): Promise<Posts> {
     return this.service.getAllPosts();
+  }
+}
+
+/**
+ * Create post use case for creating instances of new posts.
+ *
+ * Performs assembling, validation operations on the posts and saving them to the DB.
+ */
+@injectable()
+export class CreatePostUseCase extends PostUseCase {
+  constructor(@inject(PostService) private readonly service: PostService) {
+    super();
+  }
+
+  public async execute(input: CreatePostDTO): Promise<Post> {
+    this.validatePostData(input.authorId, input.blocks);
+    return this.createPost(input);
+  }
+
+  /**
+   * Creates a new post with provided data and saves it to the DB.
+   *
+   * @param {CreatePostDTO} input - data to be set into the new post.
+   * @returns {Promise<Post>} - A new Post instance.
+   */
+  private async createPost(input: CreatePostDTO): Promise<Post> {
+    const newPost: Post = await this.service.createNewPost(input);
+
+    // Save into DB.
+    await newPost.save();
+    return newPost;
+  }
+
+  /**
+   * Checks if the provided data fully complains to a new post.
+   *
+   * @param {ObjectId} authorId - Specific author (user account) identifier.
+   * @param {PostBlocks} blocks - Array of the content slices.
+   * @throws {BadRequestError} - Error of invalid provided data.
+   */
+  private validatePostData(authorId: ObjectId, blocks: PostBlocks): void {
+    if (!authorId || blocks.length === 0 || !blocks) {
+      throw new BadRequestError("Required post fields missing.");
+    }
   }
 }
