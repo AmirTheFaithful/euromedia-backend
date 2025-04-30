@@ -168,3 +168,66 @@ export class CreatePostUseCase extends PostUseCase {
     }
   }
 }
+
+/**
+ * Update post use case for modification of posts.
+ *
+ * Performs basic-level data validation to be updated and saves changes to the DB.
+ */
+@injectable()
+export class UpdatePostUseCase extends PostUseCase {
+  constructor(@inject(PostService) private readonly service: PostService) {
+    super();
+  }
+
+  /**
+   * Only outside-accessible method of this class - it's entry point.
+   *
+   * @param {{ id: string }} query - Object containing post's unique identifier, which should come from the controller's req.params object..
+   * @param {UpdatePostDTO} body - Data fields of the post to updated.
+   * @returns {Promise<Post>} - Updated post.
+   */
+  public async execute(
+    query: { id: string },
+    body: UpdatePostDTO
+  ): Promise<Post> {
+    const id: ObjectId = this.validateObjectId(query.id);
+    this.validateUpdateData(body.blocks);
+    return this.performPostUpdate(id, body);
+  }
+
+  /**
+   * Validates updating data for it's presence and possible number of content blocks.
+   *
+   * @param {PostBlocks | undefined} blocks - Content blocks or 'nothing' as this methods expects that content to be modified may not be provided
+   * @throws {BadRequestError} - Throws error if there's aren't any data provided.
+   */
+  private validateUpdateData(blocks: PostBlocks | undefined): void {
+    if (!blocks || blocks.length === 0) {
+      throw new BadRequestError("Required post fields missing.");
+    }
+  }
+
+  /**
+   * Updates selected to modify fields of post's content and saves changes to the DB.
+   *
+   * @param {ObjectId} id - Post's specific identifier.
+   * @param {UpdatePostDTO} body - data to updated.
+   * @returns {Promise<Post>} - Updated post instance.
+   */
+  private async performPostUpdate(
+    id: ObjectId,
+    body: UpdatePostDTO
+  ): Promise<Post> {
+    const updatedPost: Post | null = await this.service.updatePostById(
+      id,
+      body
+    );
+
+    if (!updatedPost)
+      throw new NotFoundError(`The post with 'id' ${id} - were not found.`);
+
+    await updatedPost.save();
+    return updatedPost;
+  }
+}
