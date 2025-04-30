@@ -22,6 +22,7 @@ import { cache } from "../config/lru";
 export interface Queries {
   id?: string;
   authorId?: string;
+  tags?: string[];
 }
 
 /**
@@ -58,7 +59,7 @@ export class FetchPostUseCase extends PostUseCase {
   }
 
   public async execute(input: Queries) {
-    const { authorId, id } = input;
+    const { authorId, tags, id } = input;
 
     if (id) {
       return await this.getById(id);
@@ -66,6 +67,10 @@ export class FetchPostUseCase extends PostUseCase {
 
     if (authorId) {
       return await this.getByAuthorId(authorId);
+    }
+
+    if (tags) {
+      return await this.getByTags(tags);
     }
 
     return await this.getAllPosts();
@@ -113,6 +118,21 @@ export class FetchPostUseCase extends PostUseCase {
     }
 
     return posts;
+  }
+
+  /**
+   * Fetch all posts by provided specific tags, targeting to them.
+   *
+   * @param {string[]} tags - Arrray of tags.
+   * @throws {BadRequestError} - Error of invalid queries, which doesn't contain any specified tag.
+   * @returns {Promise<Posts>} - Array of posts found by the tags, otherwise an empty array.
+   */
+  public async getByTags(tags: string[]): Promise<Posts> {
+    if (tags.length === 0) {
+      throw new BadRequestError("'tags' query parameter missing.");
+    }
+
+    return this.service.getPostsByTags(tags);
   }
 
   /**
