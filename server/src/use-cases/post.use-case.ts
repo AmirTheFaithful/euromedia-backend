@@ -251,3 +251,37 @@ export class UpdatePostUseCase extends PostUseCase {
     return updatedPost;
   }
 }
+
+/**
+ * Delete post use case for performing deletion process of posts by their unique ID.
+ *
+ * Performs validation of the query 'id' parameter and deletes a post from the DB.
+ */
+@injectable()
+export class DeletePostUseCase extends PostUseCase {
+  constructor(@inject(PostService) private readonly service: PostService) {
+    super();
+  }
+
+  public async execute(input: { id: string }): Promise<Post> {
+    const id: ObjectId = this.validateObjectId(input.id);
+    return this.performDeletionRequest(id);
+  }
+
+  /**
+   * Performs deletion request of the specified post and checks for its existing.
+   *
+   * @param {ObjectId} id - Unique identifier of the post to be deleted.
+   * @throws {NotFoundError} - Error indicating that the post is not exist in the DB.
+   * @returns {Promise<Post>} - Deleted post instance will be returned after successfull deletion process.
+   */
+  private async performDeletionRequest(id: ObjectId): Promise<Post> {
+    const deletedPost: Post | null = await this.service.deletePostById(id);
+
+    if (!deletedPost) {
+      throw new NotFoundError(`Post with id '${id}' were not found.`);
+    }
+
+    return deletedPost;
+  }
+}
