@@ -61,13 +61,11 @@ export type Posts = Post[];
  *
  * @typedef {Object} CreatePostDTO
  * @property {ObjectId} authorId - The ID of the user creating the post.
- * @property {string} title - The title of the new post.
  * @property {PostBlocks} blocks - Content blocks comprising the body of the post.
  * @property {string[]=} tags - Optional tags to be associated with the post.
  */
 export type CreatePostDTO = {
   authorId: ObjectId;
-  title: string;
   blocks: PostBlocks;
   tags?: Array<string>;
 };
