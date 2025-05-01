@@ -83,7 +83,7 @@ export class FetchPostUseCase extends PostUseCase {
    * @returns {Promise<Post | null>} - A post or null if there's nothing on cache or the DB.
    * @throws {NotFoundError} - Exception throwen whe user by provided ID wasn't found.
    */
-  public async getById(query: string): Promise<Post | null> {
+  private async getById(query: string): Promise<Post | null> {
     const id = this.validateObjectId(query);
     let post: Post | null = cache.get(`postId:${query}`);
 
@@ -105,7 +105,7 @@ export class FetchPostUseCase extends PostUseCase {
    * @returns {Promise<Post[] | null>} - Array of posts or null if no posts were found for the specified author ID.
    * @throws {NotFoundError} - Exception throws when no user has been found by specified ID.
    */
-  public async getByAuthorId(query: string): Promise<Posts | null> {
+  private async getByAuthorId(query: string): Promise<Posts | null> {
     const id = this.validateObjectId(query);
     let posts: Posts | null = cache.get(`postAuthorId:${query}`);
 
@@ -127,7 +127,7 @@ export class FetchPostUseCase extends PostUseCase {
    * @throws {BadRequestError} - Error of invalid queries, which doesn't contain any specified tag.
    * @returns {Promise<Posts>} - Array of posts found by the tags, otherwise an empty array.
    */
-  public async getByTags(tags: string[]): Promise<Posts> {
+  private async getByTags(tags: string[]): Promise<Posts> {
     if (tags.length === 0) {
       throw new BadRequestError("'tags' query parameter missing.");
     }
@@ -140,7 +140,7 @@ export class FetchPostUseCase extends PostUseCase {
    *
    * @returns {Promise<Post[]>} = An array of posts.
    */
-  public async getAllPosts(): Promise<Posts> {
+  private async getAllPosts(): Promise<Posts> {
     return this.service.getAllPosts();
   }
 }
