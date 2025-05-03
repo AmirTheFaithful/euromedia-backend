@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { injectable, inject } from "inversify";
 
 import UserModel from "../models/user.model";
-import { User, Users, CreateUserDTO, UpdateUserDTO } from "../types/user.type";
+import { User, Users, UpdateUserDTO } from "../types/user.type";
 
 type AsyncUser = Promise<User | null>;
 
@@ -22,7 +22,7 @@ class UserRepository {
     return this.model.model.findOne({ "auth.email": email });
   }
 
-  public async createNewUser(data: CreateUserDTO): Promise<User> {
+  public async createNewUser(data: Pick<User, "meta" | "auth">): Promise<User> {
     return new this.model.model(data);
   }
 
