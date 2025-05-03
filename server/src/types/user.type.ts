@@ -45,12 +45,12 @@ export interface UserMeta {
  * @interface UserAuth
  * @property {string} email - The user's unique login email.
  * @property {string} password - The user's hashed password.
- * @property {boolean} verified - Flag indicating whether the user's email is verified.
+ * @property {boolean} verified - Optional flag indicating whether the user's email is verified.
  */
 export interface UserAuth {
   email: string;
   password: string;
-  verified: boolean;
+  verified?: boolean;
 }
 
 /**
