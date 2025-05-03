@@ -21,7 +21,17 @@ class UserService {
   }
 
   public async createNewUser(data: CreateUserDTO) {
-    return this.repo.createNewUser(data);
+    // Distribute plain data object by setting 'meta' and 'auth' categories.
+    return this.repo.createNewUser({
+      meta: {
+        firstname: data.firstname,
+        lastname: data.lastname,
+      },
+      auth: {
+        email: data.email,
+        password: data.password,
+      },
+    });
   }
 
   public async updateUserById(id: ObjectId, data: UpdateUserDTO) {
