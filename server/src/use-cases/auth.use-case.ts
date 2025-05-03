@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { injectable, inject } from "inversify";
 import { genSalt, hash, compare } from "bcrypt";
 import { createTransport } from "nodemailer";
@@ -71,7 +71,22 @@ export class RegisterUseCase extends AuthUseCase {
   }
 
   public async execute(input: CreateUserDTO): Promise<void> {
-    const { firstname, lastname, email, password } = this.schema.parse(input);
+    let parsed: CreateUserDTO;
+
+    // Parsing provided request body may throw some error
+    try {
+      parsed = this.schema.parse(input);
+    } catch (error: any) {
+      // User data validation error
+      if (error instanceof ZodError) {
+        throw new BadRequestError(error.issues[0].message);
+      }
+
+      // Any other errors will be handled by asyncHandler on the controller.
+      throw error;
+    }
+
+    const { firstname, lastname, email, password } = parsed;
 
     // Check if provided email is already registered.
     await this.checkExistence(email, "conflict");
@@ -90,12 +105,20 @@ export class RegisterUseCase extends AuthUseCase {
     await newUser.save();
   }
 
-  // Validate request body:
+  // Validate request body with customized Zod error messages:
   private readonly schema = z.object({
-    firstname: z.string(),
-    lastname: z.string(),
-    email: z.string().email(),
-    password: z.string().min(8),
+    firstname: z.string({
+      required_error: "Bad Request (firstname field is required).",
+    }),
+    lastname: z.string({
+      required_error: "Bad Request (lastname field is required).",
+    }),
+    email: z
+      .string({ required_error: "Bad Request (email field is required)." })
+      .email("Bad Request (invalid email)."),
+    password: z
+      .string({ required_error: "Bad Request (password field is required)." })
+      .min(8, "Bad Request (the password is too short and simple)."),
   });
 
   private readonly transporter = createTransport({
