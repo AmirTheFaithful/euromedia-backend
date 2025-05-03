@@ -24,7 +24,7 @@ const UserSchema = new Schema<User>({
     // Hashed password, required and excluded from query results for security
     password: { type: String, required: true, selected: false },
     // Indicates whether the user has verified their account (e.g., email confirmation)
-    verified: { type: Boolean, required: true },
+    verified: { type: Boolean, default: false },
   },
   location: {
     // Optional country field (excluded from selection to avoid exposing location data by default)
