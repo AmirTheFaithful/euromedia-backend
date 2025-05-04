@@ -71,38 +71,44 @@ export class RegisterUseCase extends AuthUseCase {
   }
 
   public async execute(input: CreateUserDTO): Promise<void> {
-    let parsed: CreateUserDTO;
-
-    // Parsing provided request body may throw some error
-    try {
-      parsed = this.schema.parse(input);
-    } catch (error: any) {
-      // User data validation error
-      if (error instanceof ZodError) {
-        throw new BadRequestError(error.issues[0].message);
-      }
-
-      // Any other errors will be handled by asyncHandler on the controller.
-      throw error;
-    }
-
-    const { firstname, lastname, email, password } = parsed;
+    // Parse and validate provided request body.
+    const parsed = this.parseInput(input);
+    const { email } = parsed;
 
     // Check if provided email is already registered.
     await this.checkExistence(email, "conflict");
 
     // Create a new user account into DB:
-    const newUser = await this.service.createNewUser({
-      firstname,
-      lastname,
-      email,
-      password: await this.hashPassword(password),
-    });
+    const newUserID = await this.createInstance(parsed);
 
     // Send verification token as link to the user's email:
-    await this.sendVerificationEmail(newUser._id as ObjectId, email);
+    await this.sendVerificationEmail(newUserID as ObjectId, email);
+  }
 
+  private parseInput(input: CreateUserDTO): CreateUserDTO {
+    // Parsing provided request body may throw some error
+    try {
+      return this.schema.parse(input);
+    } catch (error: any) {
+      // User data validation error
+      if (error instanceof ZodError) {
+        for (const issue of error.issues) {
+          throw new BadRequestError(issue.message);
+        }
+      }
+
+      // Any other errors will be handled by asyncHandler on the controller.
+      throw error;
+    }
+  }
+
+  private async createInstance(data: CreateUserDTO): Promise<ObjectId> {
+    const newUser = await this.service.createNewUser({
+      ...data,
+    });
     await newUser.save();
+
+    return newUser._id as ObjectId;
   }
 
   // Validate request body with customized Zod error messages:
