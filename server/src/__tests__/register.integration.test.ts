@@ -33,11 +33,6 @@ beforeAll(async (): Promise<void> => {
   testApp = app();
 });
 
-// Cleanup th cluster before each register response (even failed, because the registration system checks for the same email presence in the DB).
-// beforeEach(async (): Promise<void> => {
-//   await testModel.deleteMany();
-// });
-
 // Cleanup the cluster after all tests.
 afterAll(async (): Promise<void> => {
   await testModel.deleteMany();
@@ -89,9 +84,9 @@ describe("POST auth/register", () => {
       .post(baseURL)
       .send(invalidCredentials);
 
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(400);
     expect(response.body.message).toBe(
-      "User validation failed: meta.firstname: Path `meta.firstname` is required."
+      "Bad Request (firstname should be at least two characters-long)."
     );
   });
 
@@ -108,9 +103,9 @@ describe("POST auth/register", () => {
       .post(baseURL)
       .send(invalidCredentials);
 
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(400);
     expect(response.body.message).toBe(
-      "User validation failed: meta.lastname: Path `meta.lastname` is required."
+      "Bad Request (lastname should be at least two characters-long)."
     );
   });
 
@@ -127,8 +122,8 @@ describe("POST auth/register", () => {
       .post(baseURL)
       .send(invalidCredentials);
 
-    expect(response.statusCode).toBe(500);
-    // expect(response.body.message).toBe("Invalid email");
+    expect(response.statusCode).toBe(400);
+    expect(response.body.message).toBe("Bad Request (invalid email).");
   });
 
   it("Refuses to register due to invalid password (too short)", async () => {
@@ -144,15 +139,15 @@ describe("POST auth/register", () => {
       .post(baseURL)
       .send(invalidCredentials);
 
-    expect(response.statusCode).toBe(500);
-    // expect(response.body.message).toBe("Invalid email");
+    expect(response.statusCode).toBe(400);
+    expect(response.body.message).toBe(
+      "Bad Request (the password is too short and simple)."
+    );
   });
 
   it("Refuses to register due to conflict between the same emails", async () => {
     // First, register a user with the same email as the next one:
-    const registrationResponse: Response = await request(testApp)
-      .post(baseURL)
-      .send(validCredentials);
+    await request(testApp).post(baseURL).send(validCredentials);
 
     // Now invalidate them by setting empty string as firstname:
     const response: Response = await request(testApp)

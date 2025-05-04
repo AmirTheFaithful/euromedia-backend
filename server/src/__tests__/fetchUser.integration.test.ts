@@ -65,7 +65,7 @@ describe("GET user by id.", () => {
 
     expect(response.headers["x-cache-status"]).toBe("HIT");
     expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe("Fetch success. (cached)");
+    expect(response.body.message).toBe("Fetch success (cached).");
     expect(response.body.data.meta).toEqual(dummyUser.meta);
     expect(response.body.data.auth).toEqual(dummyUser.auth);
   });
@@ -112,7 +112,7 @@ describe("GET user by email.", () => {
 
     expect(response.headers["x-cache-status"]).toBe("HIT");
     expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe("Fetch success. (cached)");
+    expect(response.body.message).toBe("Fetch success (cached).");
     expect(response.body.data.meta).toEqual(dummyUser.meta);
     expect(response.body.data.auth).toEqual(dummyUser.auth);
   });
