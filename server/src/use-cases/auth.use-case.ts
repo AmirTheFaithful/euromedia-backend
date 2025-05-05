@@ -3,6 +3,7 @@ import { injectable, inject } from "inversify";
 import { genSalt, hash, compare } from "bcrypt";
 import { createTransport } from "nodemailer";
 import { ObjectId } from "mongodb";
+import { Error } from "mongoose";
 import { sign, verify, JwtPayload } from "jsonwebtoken";
 import { IncomingHttpHeaders } from "http";
 
@@ -102,10 +103,12 @@ export class RegisterUseCase extends AuthUseCase {
     }
   }
 
-  private async createInstance(data: CreateUserDTO): Promise<ObjectId> {
+  private async createInstance(data: CreateUserDTO): Promise<ObjectId | void> {
     const newUser = await this.service.createNewUser({
       ...data,
+      password: await this.hashPassword(data.password),
     });
+
     await newUser.save();
 
     return newUser._id as ObjectId;
