@@ -126,12 +126,19 @@ export class RegisterUseCase extends AuthUseCase {
 
   // Validate request body with customized Zod error messages:
   private readonly schema = z.object({
-    firstname: z.string({
-      required_error: "Bad Request (firstname field is required).",
-    }),
-    lastname: z.string({
-      required_error: "Bad Request (lastname field is required).",
-    }),
+    firstname: z
+      .string({
+        required_error: "Bad Request (firstname field is required).",
+      })
+      .min(
+        2,
+        "Bad Request (firstname should be at least two characters-long)."
+      ),
+    lastname: z
+      .string({
+        required_error: "Bad Request (lastname field is required).",
+      })
+      .min(2, "Bad Request (lastname should be at least two characters-long)."),
     email: z
       .string({ required_error: "Bad Request (email field is required)." })
       .email("Bad Request (invalid email)."),
