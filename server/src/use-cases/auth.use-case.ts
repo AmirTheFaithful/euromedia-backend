@@ -104,14 +104,24 @@ export class RegisterUseCase extends AuthUseCase {
   }
 
   private async createInstance(data: CreateUserDTO): Promise<ObjectId | void> {
-    const newUser = await this.service.createNewUser({
-      ...data,
-      password: await this.hashPassword(data.password),
-    });
+    try {
+      const newUser = await this.service.createNewUser({
+        ...data,
+        password: await this.hashPassword(data.password),
+      });
 
-    await newUser.save();
+      await newUser.save();
 
-    return newUser._id as ObjectId;
+      return newUser._id as ObjectId;
+    } catch (error: any) {
+      if (error instanceof Error.ValidationError) {
+        Object.values(error.errors).forEach((err) => {
+          throw new BadRequestError(
+            `${error.name}: Field '${err.path}' is required.`
+          );
+        });
+      }
+    }
   }
 
   // Validate request body with customized Zod error messages:
