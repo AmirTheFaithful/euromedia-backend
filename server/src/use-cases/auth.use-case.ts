@@ -313,7 +313,7 @@ export class LoginUseCase extends AuthUseCase {
     const match: boolean = await compare(password, hash);
 
     if (!match) {
-      throw new BadRequestError("Incorrect password.");
+      throw new UnauthorizedError("Incorrect password.");
     }
   }
 }
