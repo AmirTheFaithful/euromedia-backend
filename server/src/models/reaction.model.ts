@@ -20,7 +20,7 @@ import { Reaction } from "../types/reaction.type";
 const ReactionSchema = new Schema<Reaction>({
   authorId: { type: Schema.Types.ObjectId, required: true, selected: true },
   targetId: { type: Schema.Types.ObjectId, required: true, selected: true },
-  emoji: { type: String, required: true, selected: true },
+  type: { type: String, required: true, selected: true },
   updated: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now() },
   updatedAt: { type: Date, default: Date.now() },
