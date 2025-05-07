@@ -85,7 +85,10 @@ export type Reactions = Reaction[];
  *
  * @typedef {Omit<Reaction, "updated" | "createdAt">} CreateReactionDTO.
  */
-export type CreateReactionDTO = Omit<Reaction, "updated" | "createdAt">;
+export type CreateReactionDTO = Omit<
+  Reaction,
+  "updated" | "createdAt" | "updatedAt"
+>;
 
 /**
  * Represents an object with fields allowed to be modified.
