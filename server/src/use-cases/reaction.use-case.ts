@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 
 import ReactionService from "../services/reaction.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
-import { Reaction, Reactions } from "../types/reaction.type";
+import { Reaction, Reactions, CreateReactionDTO } from "../types/reaction.type";
 
 interface Queries {
   id?: string;
@@ -87,5 +87,38 @@ export class FetchReactionUseCase extends ReactionUseCase {
 
     this.assertReactionIsFound(reaction);
     return reaction;
+  }
+}
+
+@injectable()
+export class CreateReactionUseCase extends ReactionUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
+  }
+
+  public async execute(input: CreateReactionDTO): Promise<Reaction> {
+    this.assertDataIsValid(input);
+    return this.createReaction(input);
+  }
+
+  private assertDataIsValid(
+    data: CreateReactionDTO
+  ): asserts data is CreateReactionDTO {
+    let { targetId, authorId, type } = data;
+    targetId = this.validateObjectId(data.targetId as unknown as string);
+    authorId = this.validateObjectId(data.authorId as unknown as string);
+
+    if (!type) {
+      throw new BadRequestError("The 'type' field is required.");
+    }
+  }
+
+  private async createReaction(data: CreateReactionDTO): Promise<Reaction> {
+    const newReaction: Reaction = await this.service.createNewReaction(data);
+
+    await newReaction.save();
+    return newReaction;
   }
 }
