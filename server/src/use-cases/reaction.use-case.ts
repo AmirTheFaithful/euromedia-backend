@@ -183,3 +183,35 @@ export class UpdateReactionUseCase extends ReactionUseCase {
     return updatedReaction;
   }
 }
+
+@injectable()
+export class DeleteReactionUseCase extends ReactionUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
+  }
+
+  public async manageQuery(queries: Queries): Promise<Reaction> {
+    let deletedReaction: Reaction | null = null;
+
+    if (queries.id) {
+      const id = this.validateObjectId(queries.id);
+      deletedReaction = await this.service.deleteReactionById(id);
+    }
+
+    if (queries.special) {
+      const targetId = this.validateObjectId(queries.special.targetId);
+      const authorId = this.validateObjectId(queries.special.authorId);
+
+      deletedReaction = await this.service.deleteReactionByTargetIdAndAuthorId(
+        targetId,
+        authorId
+      );
+    }
+
+    this.assertReactionIsFound(deletedReaction);
+
+    return deletedReaction;
+  }
+}
