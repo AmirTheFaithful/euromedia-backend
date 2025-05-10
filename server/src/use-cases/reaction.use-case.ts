@@ -3,7 +3,12 @@ import { ObjectId } from "mongodb";
 
 import ReactionService from "../services/reaction.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
-import { Reaction, Reactions, CreateReactionDTO } from "../types/reaction.type";
+import {
+  Reaction,
+  Reactions,
+  CreateReactionDTO,
+  UpdateReactionDTO,
+} from "../types/reaction.type";
 
 interface Queries {
   id?: string;
@@ -120,5 +125,61 @@ export class CreateReactionUseCase extends ReactionUseCase {
 
     await newReaction.save();
     return newReaction;
+  }
+}
+
+@injectable()
+export class UpdateReactionUseCase extends ReactionUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
+  }
+
+  public async execute(
+    queries: Queries,
+    data: UpdateReactionDTO
+  ): Promise<Reaction> {
+    this.assertDataIsValid(data);
+    return await this.updateReaction(queries, data);
+  }
+
+  private assertDataIsValid(
+    data: UpdateReactionDTO
+  ): asserts data is UpdateReactionDTO {
+    const { type, updated, updatedAt } = data;
+    if (!type || !updated || !updatedAt) {
+      throw new BadRequestError("Some required field is missing.");
+    }
+  }
+
+  private async updateReaction(
+    queries: Queries,
+    data: UpdateReactionDTO
+  ): Promise<Reaction> {
+    let updatedReaction: Reaction | null = null;
+
+    if (queries.id) {
+      const id = this.validateObjectId(queries.id);
+      updatedReaction = await this.service.updateReactionById(id, data);
+    }
+
+    if (queries.special) {
+      const targetId = this.validateObjectId(queries.special.targetId);
+      const authorId = this.validateObjectId(queries.special.authorId);
+      updatedReaction = await this.service.updateReactionByTargetIdAndAuthorId(
+        targetId,
+        authorId,
+        data
+      );
+    }
+
+    this.assertReactionIsFound(updatedReaction);
+
+    if (!updatedReaction.updated) updatedReaction.updated = true;
+    updatedReaction.updatedAt = new Date();
+    await updatedReaction.save();
+
+    return updatedReaction;
   }
 }
