@@ -95,7 +95,4 @@ export type CreateReactionDTO = Omit<
  *
  * @typedef {Pick<Reaction, "type" | "updated" | "updatedAt">} UpdateReactionDTO
  */
-export type UpdateReactionDTO = Pick<
-  Reaction,
-  "type" | "updated" | "updatedAt"
->;
+export type UpdateReactionDTO = Pick<Reaction, "type">;

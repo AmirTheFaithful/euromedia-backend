@@ -5,119 +5,149 @@ import ReactionService from "../services/reaction.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
 import {
   Reaction,
-  Reactions,
+  CreateReactionInputDTO,
   CreateReactionDTO,
   UpdateReactionDTO,
 } from "../types/reaction.type";
 
 interface Queries {
   id?: string;
-  special?: {
-    authorId: string;
-    targetId: string;
-  };
+  authorId?: string;
+  targetId?: string;
 }
 
-export class ReactionUseCase {
+export abstract class ReactionUseCase {
+  protected constructor(protected readonly service: ReactionService) {}
+
   /**
    * Convert a string to a valid ObjectID instance, if the provided value is valid.
    *
-   * @param {string} id - value to be converted to the ObjectID.
+   * @param {string} id - Value to be converted to the ObjectID.
    * @returns {ObjectID} - An instance of the ObjectID.
    * @throws {BadRequestError} - Exception if the invalid vale has been provided.
    */
   protected validateObjectId(id: string): ObjectId {
-    if (!id || !ObjectId.isValid(id)) {
-      throw new BadRequestError(`Query '${id}' is not valid id.`);
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestError(`Identifier '${id}' is not valid ObjectId.`);
     }
 
     return new ObjectId(id);
   }
 
-  protected assertReactionIsFound(
-    reaction: Reaction | null
-  ): asserts reaction is Reaction {
-    if (!reaction) {
-      throw new NotFoundError("Reaction not found.");
+  /**
+   * Asserts that the provided object is not null or undefined.
+   *
+   * @template T - The type of the object being checked.
+   * @param {T} object The object to check for existence.
+   * @throws {NotFoundError} If the object is null or undefined.
+   * @asserts object is T. Ensures the object is defined after this call.
+   */
+  protected assertObjectIsFound<T>(object: T | null): asserts object is T {
+    if (!object) {
+      throw new NotFoundError("Object not found.");
     }
+  }
+
+  protected validateQueries(
+    targetId: string,
+    authorId: string
+  ): [ObjectId, ObjectId] {
+    return [this.validateObjectId(targetId), this.validateObjectId(authorId)];
   }
 }
 
 @injectable()
 export class FetchReactionUseCase extends ReactionUseCase {
-  constructor(
-    @inject(ReactionService) private readonly service: ReactionService
-  ) {
-    super();
+  constructor(@inject(ReactionService) service: ReactionService) {
+    super(service);
   }
 
-  public async execute(input: Queries): Promise<Reaction | Reactions> {
-    return await this.controllFetch(input);
+  public async execute(queries: Queries) {
+    const data = await this.decideQuery(queries);
+    this.assertObjectIsFound(data);
+    return data;
   }
 
-  private async controllFetch(queries: Queries): Promise<Reaction | Reactions> {
-    if (queries.id) {
-      return this.fetchById(queries.id);
+  /**
+   * Distribute operation flow by queries.
+   *
+   * @param {Queries} queries - A unique identifier or the group of identifiers of the specific reaction.
+   * @throws {BadRequestError} - When no queries were provided.
+   * @returns {Promise<Reaction | Reactions>} - A specific reaction or an array of reactions, if target's all reactions ordered.
+   * */
+  private async decideQuery(queries: Queries) {
+    const { id, targetId, authorId } = queries;
+
+    // By reaction's own identifier.
+    if (id) {
+      return await this.fetchById(id);
     }
 
-    if (queries.special) {
-      return this.fetchByTargetIdAndAuthorId(
-        queries.special.targetId,
-        queries.special.authorId
-      );
+    // By reaction target's and author's identifiers.
+    else if (targetId && authorId) {
+      return await this.fetchByTargetIdAndAuthorId(targetId, authorId);
     }
 
     throw new BadRequestError(
-      "No queries provided. Either 'id' or 'special' (targetId and authorId) should be provided."
+      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
     );
   }
 
-  private async fetchById(query: string): Promise<Reaction> {
+  /**
+   * Finds a specific reaction by its unique ID.
+   *
+   * @param {string} query - Reaction's unique ID.
+   * @returns {Promise<Reaction | null>} - Fetched reaction or null if it weren't found.
+   */
+  private async fetchById(query: string) {
     const id = this.validateObjectId(query);
-    const reaction: Reaction | null = await this.service.getReactionById(id);
-
-    this.assertReactionIsFound(reaction);
-    return reaction;
+    return await this.service.getReactionById(id);
   }
 
+  /**
+   * Finds a specific reaction by target's and author's identifiers.
+   *
+   * @param {string} targetQuery - Target's unique identifier.
+   * @param {string} authorQuery - Author's unique identifier.
+   * @returns {Promise<Reaction | null>} - Fetched reaction or null if it weren't found.
+   */
   private async fetchByTargetIdAndAuthorId(
     targetQuery: string,
     authorQuery: string
-  ): Promise<Reaction> {
-    const targetId = this.validateObjectId(targetQuery);
-    const authorId = this.validateObjectId(authorQuery);
-
-    const reaction: Reaction | null =
-      await this.service.getReactionByTargetIdAndAuthorId(targetId, authorId);
-
-    this.assertReactionIsFound(reaction);
-    return reaction;
+  ) {
+    const [targetId, authorId] = this.validateQueries(targetQuery, authorQuery);
+    return await this.service.getReactionByTargetIdAndAuthorId(
+      targetId,
+      authorId
+    );
   }
 }
 
 @injectable()
 export class CreateReactionUseCase extends ReactionUseCase {
-  constructor(
-    @inject(ReactionService) private readonly service: ReactionService
-  ) {
-    super();
+  constructor(@inject(ReactionService) service: ReactionService) {
+    super(service);
   }
 
-  public async execute(input: CreateReactionDTO): Promise<Reaction> {
-    this.assertDataIsValid(input);
-    return this.createReaction(input);
+  public async execute(input: CreateReactionInputDTO): Promise<Reaction> {
+    const validData = this.validateDTO(input);
+    return this.createReaction(validData);
   }
 
-  private assertDataIsValid(
-    data: CreateReactionDTO
-  ): asserts data is CreateReactionDTO {
+  private validateDTO(data: CreateReactionInputDTO): CreateReactionDTO {
     let { targetId, authorId, type } = data;
-    targetId = this.validateObjectId(data.targetId as unknown as string);
-    authorId = this.validateObjectId(data.authorId as unknown as string);
 
-    if (!type) {
-      throw new BadRequestError("The 'type' field is required.");
+    if (!targetId || !authorId || !type) {
+      throw new BadRequestError(
+        "The 'type', 'authorId' and 'targetId' fields are required."
+      );
     }
+
+    return {
+      type,
+      targetId: this.validateObjectId(targetId),
+      authorId: this.validateObjectId(authorId),
+    };
   }
 
   private async createReaction(data: CreateReactionDTO): Promise<Reaction> {
@@ -130,10 +160,8 @@ export class CreateReactionUseCase extends ReactionUseCase {
 
 @injectable()
 export class UpdateReactionUseCase extends ReactionUseCase {
-  constructor(
-    @inject(ReactionService) private readonly service: ReactionService
-  ) {
-    super();
+  constructor(@inject(ReactionService) service: ReactionService) {
+    super(service);
   }
 
   public async execute(
@@ -147,9 +175,8 @@ export class UpdateReactionUseCase extends ReactionUseCase {
   private assertDataIsValid(
     data: UpdateReactionDTO
   ): asserts data is UpdateReactionDTO {
-    const { type, updated, updatedAt } = data;
-    if (!type || !updated || !updatedAt) {
-      throw new BadRequestError("Some required field is missing.");
+    if (!data.type) {
+      throw new BadRequestError("The 'type' field is missing.");
     }
   }
 
@@ -157,61 +184,89 @@ export class UpdateReactionUseCase extends ReactionUseCase {
     queries: Queries,
     data: UpdateReactionDTO
   ): Promise<Reaction> {
+    const { id, targetId, authorId } = queries;
+
     let updatedReaction: Reaction | null = null;
 
-    if (queries.id) {
-      const id = this.validateObjectId(queries.id);
-      updatedReaction = await this.service.updateReactionById(id, data);
-    }
-
-    if (queries.special) {
-      const targetId = this.validateObjectId(queries.special.targetId);
-      const authorId = this.validateObjectId(queries.special.authorId);
-      updatedReaction = await this.service.updateReactionByTargetIdAndAuthorId(
+    if (id) {
+      updatedReaction = await this.updateReactionById(id, data);
+    } else if (targetId && authorId) {
+      updatedReaction = await this.updateReactionByTargetIdAndAuthorId(
         targetId,
         authorId,
         data
       );
     }
 
-    this.assertReactionIsFound(updatedReaction);
+    this.assertObjectIsFound(updatedReaction);
 
-    if (!updatedReaction.updated) updatedReaction.updated = true;
-    updatedReaction.updatedAt = new Date();
     await updatedReaction.save();
 
     return updatedReaction;
+  }
+
+  private async updateReactionById(query: string, data: UpdateReactionDTO) {
+    const id = this.validateObjectId(query);
+    return await this.service.updateReactionById(id, data);
+  }
+
+  private async updateReactionByTargetIdAndAuthorId(
+    targetQuery: string,
+    authorQuery: string,
+    data: UpdateReactionDTO
+  ) {
+    const [targetId, authorId] = this.validateQueries(targetQuery, authorQuery);
+
+    return await this.service.updateReactionByTargetIdAndAuthorId(
+      targetId,
+      authorId,
+      data
+    );
   }
 }
 
 @injectable()
 export class DeleteReactionUseCase extends ReactionUseCase {
-  constructor(
-    @inject(ReactionService) private readonly service: ReactionService
-  ) {
-    super();
+  constructor(@inject(ReactionService) service: ReactionService) {
+    super(service);
   }
 
-  public async manageQuery(queries: Queries): Promise<Reaction> {
+  public async execute(input: Queries): Promise<Reaction> {
+    return await this.decideQuery(input);
+  }
+
+  private async decideQuery(queries: Queries) {
+    const { id, targetId, authorId } = queries;
+
     let deletedReaction: Reaction | null = null;
 
-    if (queries.id) {
-      const id = this.validateObjectId(queries.id);
-      deletedReaction = await this.service.deleteReactionById(id);
-    }
-
-    if (queries.special) {
-      const targetId = this.validateObjectId(queries.special.targetId);
-      const authorId = this.validateObjectId(queries.special.authorId);
-
-      deletedReaction = await this.service.deleteReactionByTargetIdAndAuthorId(
+    if (id) {
+      deletedReaction = await this.deleteReactionById(id);
+    } else if (targetId && authorId) {
+      deletedReaction = await this.deleteReactionByTargetIdAndAuthorId(
         targetId,
         authorId
       );
     }
 
-    this.assertReactionIsFound(deletedReaction);
+    this.assertObjectIsFound(deletedReaction);
 
     return deletedReaction;
+  }
+
+  private async deleteReactionById(query: string) {
+    const id = this.validateObjectId(query);
+    return await this.service.deleteReactionById(id);
+  }
+
+  private async deleteReactionByTargetIdAndAuthorId(
+    targetQuery: string,
+    authorQuery: string
+  ) {
+    const [targetId, authorId] = this.validateQueries(targetQuery, authorQuery);
+    return await this.service.deleteReactionByTargetIdAndAuthorId(
+      targetId,
+      authorId
+    );
   }
 }
