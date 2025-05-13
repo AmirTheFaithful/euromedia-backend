@@ -63,7 +63,7 @@ export class FetchReactionUseCase extends ReactionUseCase {
   }
 
   public async execute(queries: Queries) {
-    const data = await this.decideQuery(queries);
+    const data = await this.decideByQuery(queries);
     this.assertObjectIsFound(data);
     return data;
   }
@@ -75,7 +75,7 @@ export class FetchReactionUseCase extends ReactionUseCase {
    * @throws {BadRequestError} - When no queries were provided.
    * @returns {Promise<Reaction | Reactions>} - A specific reaction or an array of reactions, if target's all reactions ordered.
    * */
-  private async decideQuery(queries: Queries) {
+  private async decideByQuery(queries: Queries) {
     const { id, targetId, authorId } = queries;
 
     // By reaction's own identifier.
@@ -232,10 +232,10 @@ export class DeleteReactionUseCase extends ReactionUseCase {
   }
 
   public async execute(input: Queries): Promise<Reaction> {
-    return await this.decideQuery(input);
+    return await this.decideByQuery(input);
   }
 
-  private async decideQuery(queries: Queries) {
+  private async decideByQuery(queries: Queries) {
     const { id, targetId, authorId } = queries;
 
     let deletedReaction: Reaction | null = null;

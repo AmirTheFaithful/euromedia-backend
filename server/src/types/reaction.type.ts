@@ -1,6 +1,8 @@
 import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
+import { Replace } from "./utils";
+
 /**
  * Describes the kind of reaction or emotion of the user to a content unit (e.g., a post, comment, etc.).
  *
@@ -85,9 +87,28 @@ export type Reactions = Reaction[];
  *
  * @typedef {Omit<Reaction, "updated" | "createdAt">} CreateReactionDTO.
  */
-export type CreateReactionDTO = Omit<
+export type CreateReactionDTO = Pick<
   Reaction,
-  "updated" | "createdAt" | "updatedAt"
+  "type" | "targetId" | "authorId"
+>;
+
+/**
+ * Input DTO for creating a new reaction, as received from the client.
+ *
+ * Based on {@link CreateReactionDTO}, but replaces `targetId` and `authorId`
+ * with `string` types, since client-side input comes as plain strings (e.g. query strings parameters).
+ * These fields are expected to be converted to `ObjectId` before being used
+ * in service, repository, or database layers.
+ *
+ * @typedef {CreateReactionInputDTO}
+ *
+ * @property {string} targetId - The ID of the target entity (e.g., post or comment) as a string.
+ * @property {string} authorId - The ID of the user who authored the reaction, as a string.
+ * @property {"like" | "dislike" | ...} type - The type of reaction, following the {@link ReactionType}.
+ */
+export type CreateReactionInputDTO = Replace<
+  CreateReactionDTO,
+  { targetId: string; authorId: string }
 >;
 
 /**
