@@ -1,7 +1,7 @@
 import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
-import { Replace } from "./utils";
+import { Replace } from "./utils.type";
 
 /**
  * Describes the kind of reaction or emotion of the user to a content unit (e.g., a post, comment, etc.).
