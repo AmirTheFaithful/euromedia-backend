@@ -9,12 +9,7 @@ import {
   CreateReactionDTO,
   UpdateReactionDTO,
 } from "../types/reaction.type";
-
-interface Queries {
-  id?: string;
-  authorId?: string;
-  targetId?: string;
-}
+import { SubentityQueries } from "../types/queries.type";
 
 /**
  * Abstract base class for all reaction-related use cases.
@@ -77,7 +72,7 @@ export class FetchReactionUseCase extends ReactionUseCase {
     super(service);
   }
 
-  public async execute(queries: Queries) {
+  public async execute(queries: SubentityQueries) {
     const data = await this.decideByQuery(queries);
     this.assertObjectIsFound(data);
     return data;
@@ -86,11 +81,11 @@ export class FetchReactionUseCase extends ReactionUseCase {
   /**
    * Distribute operation flow by queries.
    *
-   * @param {Queries} queries - A unique identifier or the group of identifiers of the specific reaction.
+   * @param {SubentityQueries} queries - A unique identifier or the group of identifiers of the specific reaction.
    * @throws {BadRequestError} - When no queries were provided.
    * @returns {Promise<Reaction | Reactions>} - A specific reaction or an array of reactions, if target's all reactions ordered.
    * */
-  private async decideByQuery(queries: Queries) {
+  private async decideByQuery(queries: SubentityQueries) {
     const { id, targetId, authorId } = queries;
 
     // By reaction's own identifier.
@@ -220,7 +215,7 @@ export class UpdateReactionUseCase extends ReactionUseCase {
   }
 
   public async execute(
-    queries: Queries,
+    queries: SubentityQueries,
     data: UpdateReactionDTO
   ): Promise<Reaction> {
     this.assertDataIsValid(data);
@@ -245,12 +240,12 @@ export class UpdateReactionUseCase extends ReactionUseCase {
    * Determines update strategy based on provided query.
    * Updates either by `id` or by `targetId` + `authorId`.
    *
-   * @param {Queries} queries - Identifiers for the reaction
+   * @param {SubentityQueries} queries - Identifiers for the reaction
    * @param {UpdateReactionDTO} data - Update data
    * @returns {Promise<Reaction>} The updated and saved reaction
    */
   private async updateReaction(
-    queries: Queries,
+    queries: SubentityQueries,
     data: UpdateReactionDTO
   ): Promise<Reaction> {
     const { id, targetId, authorId } = queries;
@@ -320,18 +315,18 @@ export class DeleteReactionUseCase extends ReactionUseCase {
     super(service);
   }
 
-  public async execute(input: Queries): Promise<Reaction> {
+  public async execute(input: SubentityQueries): Promise<Reaction> {
     return await this.decideByQuery(input);
   }
 
   /**
    * Determines the deletion strategy based on the query input.
    *
-   * @param {Queries} queries - An object possibly containing `id`, `targetId`, and `authorId`.
+   * @param {SubentityQueries} queries - An object possibly containing `id`, `targetId`, and `authorId`.
    * @returns {Promise<Reaction>} - The deleted Reaction.
    * @throws {NotFoundError} - If no reaction is found.
    */
-  private async decideByQuery(queries: Queries) {
+  private async decideByQuery(queries: SubentityQueries) {
     const { id, targetId, authorId } = queries;
 
     let deletedReaction: Reaction | null = null;
