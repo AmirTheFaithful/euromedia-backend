@@ -103,6 +103,11 @@ export class FetchReactionUseCase extends ReactionUseCase {
       return await this.fetchByTargetIdAndAuthorId(targetId, authorId);
     }
 
+    // Only by target's ID.
+    else if (targetId && !authorId) {
+      return await this.fetchByTargetId(targetId);
+    }
+
     throw new BadRequestError(
       "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
     );
@@ -135,6 +140,17 @@ export class FetchReactionUseCase extends ReactionUseCase {
       targetId,
       authorId
     );
+  }
+
+  /**
+   * Finds a specific reaction by target's identifier.
+   *
+   * @param {string} targetQuery - Target's unique identifier.
+   * @returns {Promise<Reactions>} - Array of fetched reactions. If there's no reactions - the array will be empty.
+   */
+  private async fetchByTargetId(targetQuery: string) {
+    const targetId: ObjectId = this.validateObjectId(targetQuery);
+    return await this.service.getReactionsByTargetId(targetId);
   }
 }
 
