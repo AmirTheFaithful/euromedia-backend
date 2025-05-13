@@ -16,6 +16,14 @@ interface Queries {
   targetId?: string;
 }
 
+/**
+ * Abstract base class for all reaction-related use cases.
+ *
+ * Provides access to the core reaction service and shared logic
+ * for concrete implementations such as create, update, fetch, or delete operations.
+ *
+ * @abstract
+ */
 export abstract class ReactionUseCase {
   protected constructor(protected readonly service: ReactionService) {}
 
@@ -56,6 +64,13 @@ export abstract class ReactionUseCase {
   }
 }
 
+/**
+ * Use case for retrieving a single reaction or a group of reactions
+ * based on various query parameters (id, targetId, authorId).
+ *
+ * Delegates the fetching logic to the appropriate service methods
+ * depending on the provided query combination.
+ */
 @injectable()
 export class FetchReactionUseCase extends ReactionUseCase {
   constructor(@inject(ReactionService) service: ReactionService) {
@@ -123,6 +138,11 @@ export class FetchReactionUseCase extends ReactionUseCase {
   }
 }
 
+/**
+ * Use case for creating a new reaction.
+ *
+ * Validates the input payload and delegates the creation logic to the service.
+ */
 @injectable()
 export class CreateReactionUseCase extends ReactionUseCase {
   constructor(@inject(ReactionService) service: ReactionService) {
@@ -134,6 +154,13 @@ export class CreateReactionUseCase extends ReactionUseCase {
     return this.createReaction(validData);
   }
 
+  /**
+   * Validates required fields and ensures targetId and authorId are valid ObjectIds.
+   *
+   * @param {CreateReactionInputDTO} data - Input DTO to validate
+   * @returns {CreateReactionDTO} A normalized and validated DTO ready for persistence
+   * @throws {BadRequestError} If required fields are missing
+   */
   private validateDTO(data: CreateReactionInputDTO): CreateReactionDTO {
     let { targetId, authorId, type } = data;
 
@@ -150,6 +177,12 @@ export class CreateReactionUseCase extends ReactionUseCase {
     };
   }
 
+  /**
+   * Persists a new reaction based on the validated input.
+   *
+   * @param {CreateReactionDTO} data - Validated data used to create the reaction
+   * @returns {Promise<Reaction>} The newly created and saved reaction
+   */
   private async createReaction(data: CreateReactionDTO): Promise<Reaction> {
     const newReaction: Reaction = await this.service.createNewReaction(data);
 
@@ -158,6 +191,12 @@ export class CreateReactionUseCase extends ReactionUseCase {
   }
 }
 
+/**
+ * Use case for updating an existing reaction.
+ *
+ * Resolves the target reaction either by ID or by a (targetId and authorId) pair,
+ * validates the input, and updates the reaction accordingly.
+ */
 @injectable()
 export class UpdateReactionUseCase extends ReactionUseCase {
   constructor(@inject(ReactionService) service: ReactionService) {
@@ -172,6 +211,12 @@ export class UpdateReactionUseCase extends ReactionUseCase {
     return await this.updateReaction(queries, data);
   }
 
+  /**
+   * Ensures that the update payload contains a valid `type`.
+   *
+   * @param {UpdateReactionDTO} data - Payload to validate
+   * @throws {BadRequestError} If `type` is missing
+   */
   private assertDataIsValid(
     data: UpdateReactionDTO
   ): asserts data is UpdateReactionDTO {
@@ -180,6 +225,14 @@ export class UpdateReactionUseCase extends ReactionUseCase {
     }
   }
 
+  /**
+   * Determines update strategy based on provided query.
+   * Updates either by `id` or by `targetId` + `authorId`.
+   *
+   * @param {Queries} queries - Identifiers for the reaction
+   * @param {UpdateReactionDTO} data - Update data
+   * @returns {Promise<Reaction>} The updated and saved reaction
+   */
   private async updateReaction(
     queries: Queries,
     data: UpdateReactionDTO
@@ -205,11 +258,26 @@ export class UpdateReactionUseCase extends ReactionUseCase {
     return updatedReaction;
   }
 
+  /**
+   * Updates a reaction using its MongoDB `_id`.
+   *
+   * @param {string} query - Raw reaction id to validate
+   * @param {UpdateReactionDTO} data - Update payload
+   * @returns {Promise<Reaction | null>} Updated reaction or null if not found
+   */
   private async updateReactionById(query: string, data: UpdateReactionDTO) {
     const id = this.validateObjectId(query);
     return await this.service.updateReactionById(id, data);
   }
 
+  /**
+   * Updates a reaction using composite key: `targetId` and `authorId`.
+   *
+   * @param {string} targetQuery - Raw target id to validate
+   * @param {string} authorQuery - Raw author id to validate
+   * @param {UpdateReactionDTO} data - Update payload
+   * @returns {Promise<Reaction | null>} Updated reaction or null if not found
+   */
   private async updateReactionByTargetIdAndAuthorId(
     targetQuery: string,
     authorQuery: string,
@@ -225,6 +293,11 @@ export class UpdateReactionUseCase extends ReactionUseCase {
   }
 }
 
+/**
+ * Use case for deleting a reaction.
+ *
+ * Supports deletion by reaction ID or by a combination of targetId and authorId.
+ */
 @injectable()
 export class DeleteReactionUseCase extends ReactionUseCase {
   constructor(@inject(ReactionService) service: ReactionService) {
@@ -235,6 +308,13 @@ export class DeleteReactionUseCase extends ReactionUseCase {
     return await this.decideByQuery(input);
   }
 
+  /**
+   * Determines the deletion strategy based on the query input.
+   *
+   * @param {Queries} queries - An object possibly containing `id`, `targetId`, and `authorId`.
+   * @returns {Promise<Reaction>} - The deleted Reaction.
+   * @throws {NotFoundError} - If no reaction is found.
+   */
   private async decideByQuery(queries: Queries) {
     const { id, targetId, authorId } = queries;
 
@@ -254,11 +334,26 @@ export class DeleteReactionUseCase extends ReactionUseCase {
     return deletedReaction;
   }
 
+  /**
+   * Deletes a reaction by its unique identifier.
+   *
+   * @param {string} query - A string representing the reaction ID.
+   * @returns {Promise<Reaction> | null} - The deleted Reaction or null.
+   * @throws {ValidationError} If the ID is invalid.
+   */
   private async deleteReactionById(query: string) {
     const id = this.validateObjectId(query);
     return await this.service.deleteReactionById(id);
   }
 
+  /**
+   * Deletes a reaction using a combination of target ID and author ID.
+   *
+   * @param {string} targetQuery - A string representing the target (e.g., post or comment) ID.
+   * @param {string} authorQuery - A string representing the author's user ID.
+   * @returns {Promise<Reaction> | null} The deleted Reaction or null.
+   * @throws {ValidationError} if either ID is invalid.
+   */
   private async deleteReactionByTargetIdAndAuthorId(
     targetQuery: string,
     authorQuery: string
