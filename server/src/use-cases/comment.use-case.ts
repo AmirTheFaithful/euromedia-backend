@@ -2,7 +2,14 @@ import { injectable, inject } from "inversify";
 import { ObjectId } from "mongodb";
 
 import CommentService from "../services/comment.service";
-import { Comment, Comments } from "../types/comment.type";
+import {
+  Comment,
+  Comments,
+  CreateCommentDTO,
+  UpdateCommentDTO,
+  CreateCommentDTOInput,
+  UpdateCommentDTOInput,
+} from "../types/comment.type";
 import { SubentityQueries } from "../types/queries.type";
 import { NotFoundError, BadRequestError } from "../errors/http-errors";
 
@@ -149,5 +156,65 @@ export class FetchCommentsUseCase extends CommentUseCase {
       targetId
     );
     return comments;
+  }
+}
+
+@injectable()
+export class CreateCommentUseCase extends CommentUseCase {
+  constructor(
+    @inject(CommentService) private readonly service: CommentService
+  ) {
+    super();
+  }
+
+  public async execute(input: CreateCommentDTOInput): Promise<Comment> {
+    return this.performCreation(input);
+  }
+
+  /**
+   * Validates the structure and contents of the comment creation DTO.
+   * Ensures all required fields are present and that identifiers are valid ObjectIds.
+   *
+   * @private
+   * @param {CreateCommentDTOInput} dto - The raw input data for creating a comment.
+   * @returns {CreateCommentDTO} A validated and normalized DTO with converted ObjectId values.
+   * @throws {BadRequestError} If required fields are missing or contain invalid values.
+   */
+  private validateDTO(dto: CreateCommentDTOInput): CreateCommentDTO {
+    const { authorId, targetId, content } = dto;
+
+    // Check all required fields for presence.
+    if (
+      !authorId ||
+      !targetId ||
+      !content ||
+      !content.content ||
+      !content.type
+    ) {
+      throw new BadRequestError();
+    }
+
+    // Check targetId and authorId to be valid ObjectId's
+    return {
+      content,
+      targetId: this.validateObjectId(targetId),
+      authorId: this.validateObjectId(authorId),
+    };
+  }
+
+  /**
+   * Performs the actual creation of a comment after validating the input DTO.
+   *
+   * @private
+   * @param {CreateCommentDTOInput} dto - The raw data for the comment to be created.
+   * @returns {Promise<Comment>} The created comment document.
+   */
+  private async performCreation(dto: CreateCommentDTOInput): Promise<Comment> {
+    const data: CreateCommentDTO = this.validateDTO(dto);
+
+    const newComment = this.service.createComment(data);
+    await newComment.save();
+
+    return newComment;
   }
 }
