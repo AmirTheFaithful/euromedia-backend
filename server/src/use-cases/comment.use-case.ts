@@ -6,8 +6,13 @@ import { Comment, Comments } from "../types/comment.type";
 import { SubentityQueries } from "../types/queries.type";
 import { NotFoundError, BadRequestError } from "../errors/http-errors";
 
-@injectable()
-export class FetchCommentsUseCase {
+/**
+ * Abstract base class for all comment-related use cases.
+ * Provides shared validation and assertion utilities for comment use case implementations.
+ *
+ * @abstract
+ */
+abstract class CommentUseCase {
   /**
    * Convert a string to a valid ObjectID instance, if the provided value is valid.
    *
@@ -51,7 +56,10 @@ export class FetchCommentsUseCase {
   ): [ObjectId, ObjectId] {
     return [this.validateObjectId(targetId), this.validateObjectId(authorId)];
   }
+}
 
+@injectable()
+export class FetchCommentsUseCase extends CommentUseCase {
   /**
    * Determines the appropriate fetch strategy based on the provided query parameters
    * and retrieves the corresponding comment(s) from the service layer.
@@ -84,7 +92,9 @@ export class FetchCommentsUseCase {
 
   constructor(
     @inject(CommentService) private readonly service: CommentService
-  ) {}
+  ) {
+    super();
+  }
 
   public async execute(queries: SubentityQueries): Promise<Comment | Comments> {
     const data: Comment | Comments | null = await this.handleFetchStrategy(
