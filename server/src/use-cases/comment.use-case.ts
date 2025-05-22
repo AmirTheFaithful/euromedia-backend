@@ -8,7 +8,6 @@ import {
   CreateCommentDTO,
   UpdateCommentDTO,
   CreateCommentDTOInput,
-  UpdateCommentDTOInput,
 } from "../types/comment.type";
 import { SubentityQueries } from "../types/queries.type";
 import { NotFoundError, BadRequestError } from "../errors/http-errors";
@@ -67,36 +66,6 @@ abstract class CommentUseCase {
 
 @injectable()
 export class FetchCommentsUseCase extends CommentUseCase {
-  /**
-   * Determines the appropriate fetch strategy based on the provided query parameters
-   * and retrieves the corresponding comment(s) from the service layer.
-   *
-   * @param {SubentityQueries} query - An object containing query parameters such as `id`, `targetId`, and `authorId`.
-   * @returns {Promise<Comment | Comments | null>} A single comment, multiple comments, or `null` if nothing is found.
-   * @throws {BadRequestError} If none of the expected query parameters are provided.
-   */
-  protected async handleFetchStrategy(
-    query: SubentityQueries
-  ): Promise<Comment | Comments | null> {
-    const { id, targetId, authorId } = query;
-
-    if (id) {
-      return this.fetchById(id);
-    }
-
-    if (targetId && authorId) {
-      return this.fetchByTargetIdAndAuthorId(targetId, authorId);
-    }
-
-    if (targetId && !authorId) {
-      return this.fetchByTargetId(targetId);
-    }
-
-    throw new BadRequestError(
-      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
-    );
-  }
-
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -104,7 +73,7 @@ export class FetchCommentsUseCase extends CommentUseCase {
   }
 
   public async execute(queries: SubentityQueries): Promise<Comment | Comments> {
-    const data: Comment | Comments | null = await this.handleFetchStrategy(
+    const data: Comment | Comments | null = await this.handleQueryStrategy(
       queries
     );
     this.assertObjectIsFound(data);
@@ -157,8 +126,46 @@ export class FetchCommentsUseCase extends CommentUseCase {
     );
     return comments;
   }
+
+  /**
+   * Determines the appropriate fetch strategy based on the provided query parameters
+   * and retrieves the corresponding comment(s) from the service layer.
+   *
+   * @param {SubentityQueries} query - An object containing query parameters such as `id`, `targetId`, and `authorId`.
+   * @returns {Promise<Comment | Comments | null>} A single comment, multiple comments, or `null` if nothing is found.
+   * @throws {BadRequestError} If none of the expected query parameters are provided.
+   */
+  protected async handleQueryStrategy(
+    queries: SubentityQueries
+  ): Promise<Comment | Comments | null> {
+    const { id, targetId, authorId } = queries;
+
+    if (id) {
+      return this.fetchById(id);
+    }
+
+    if (targetId && authorId) {
+      return this.fetchByTargetIdAndAuthorId(targetId, authorId);
+    }
+
+    if (targetId && !authorId) {
+      return this.fetchByTargetId(targetId);
+    }
+
+    throw new BadRequestError(
+      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+    );
+  }
 }
 
+/**
+ * Use case class responsible for creating new comments.
+ *
+ * Extends the base CommentUseCase and uses CommentService
+ * to handle the creation logic of comments in the system.
+ *
+ * Designed for use with dependency injection.
+ */
 @injectable()
 export class CreateCommentUseCase extends CommentUseCase {
   constructor(
@@ -216,5 +223,122 @@ export class CreateCommentUseCase extends CommentUseCase {
     await newComment.save();
 
     return newComment;
+  }
+}
+
+/**
+ * Use case class responsible for updating comments.
+ *
+ * Extends the base CommentUseCase and leverages CommentService
+ * to perform update operations following business logic.
+ *
+ * Designed to be used with dependency injection.
+ */
+@injectable()
+export class UpdateCommentUseCase extends CommentUseCase {
+  constructor(
+    @inject(CommentService) private readonly service: CommentService
+  ) {
+    super();
+  }
+
+  public async execute(
+    queries: SubentityQueries,
+    dto: UpdateCommentDTO
+  ): Promise<Comment> {
+    const validData = this.validateDTO(dto);
+    const updatedComment = await this.handleQueryStrategy(queries, validData);
+    this.assertObjectIsFound(updatedComment);
+    await updatedComment.save();
+    return updatedComment;
+  }
+
+  /**
+   * Updates a comment by its unique identifier.
+   *
+   * @param {string} query - The string representation of the comment ID.
+   * @param {UpdateCommentDTO} data - The data to update the comment with.
+   * @returns {Promise<Comment | null>} A promise resolving to the updated comment, or null if not found.
+   */
+  private async updateById(
+    query: string,
+    data: UpdateCommentDTO
+  ): Promise<Comment | null> {
+    const id = this.validateObjectId(query);
+    const updatedComment = await this.service.updateCommentById(id, data);
+    return updatedComment;
+  }
+
+  /**
+   * Updates a comment identified by both target ID and author ID.
+   *
+   * @param {string} targetQuery - The string representation of the target entity ID.
+   * @param {string} authorQuery - The string representation of the author ID.
+   * @param {UpdateCommentDTO} data - The data to update the comment with.
+   * @returns {Promise<Comment | null>} A promise resolving to the updated comment, or null if not found.
+   */
+  private async updateByTargetIdAndAuthorId(
+    targetQuery: string,
+    authorQuery: string,
+    data: UpdateCommentDTO
+  ): Promise<Comment | null> {
+    const [targetId, authorId] = this.validateQueries(targetQuery, authorQuery);
+    const updatedComment =
+      await this.service.updateCommentByTargetIdAndAuthorId(
+        targetId,
+        authorId,
+        data
+      );
+    return updatedComment;
+  }
+
+  /**
+   * Validates the update data transfer object (DTO).
+   *
+   * Ensures required fields are present; throws an error if validation fails.
+   *
+   * @param {UpdateCommentDTO} dto - The update DTO to validate.
+   * @returns {UpdateCommentDTO} The validated DTO.
+   * @throws {BadRequestError} If the `content` field is missing.
+   */
+  private validateDTO(dto: UpdateCommentDTO): UpdateCommentDTO {
+    const { content } = dto;
+
+    if (!content) {
+      throw new BadRequestError();
+    }
+
+    return { content };
+  }
+
+  /**
+   * Determines and executes the appropriate update strategy based on provided query parameters.
+   *
+   * If an `id` is provided, it performs an update by ID.
+   * If both `targetId` and `authorId` are provided, it updates by their combination.
+   * Throws an error if neither condition is met.
+   *
+   * @param {SubentityQueries} queries - The query object containing one of: `id`, `targetId`, or `authorId`.
+   * @param {UpdateCommentDTO} data - The data used to update the comment.
+   * @returns {Promise<Comment | null>} A promise resolving to the updated comment, or null if not found.
+   * @throws {BadRequestError} If no valid query combination is provided.
+   */
+  protected async handleQueryStrategy(
+    queries: SubentityQueries,
+    data: UpdateCommentDTO
+  ): Promise<Comment | null> {
+    const { id, targetId, authorId } = queries;
+
+    if (id) {
+      return this.updateById(id, data);
+    }
+
+    if (targetId && authorId) {
+      return this.updateByTargetIdAndAuthorId(targetId, authorId, data);
+    }
+
+    throw new BadRequestError(
+      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+    );
   }
 }
