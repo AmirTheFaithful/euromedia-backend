@@ -342,3 +342,90 @@ export class UpdateCommentUseCase extends CommentUseCase {
     );
   }
 }
+
+/**
+ * Use case class responsible for handling comment deletion logic.
+ *
+ * Acts as an application layer abstraction over the CommentService,
+ * coordinating deletion of comments by ID or by (targetId + authorId) strategy.
+ *
+ * Designed for use in a dependency injection context.
+ */
+@injectable()
+export class DeleteCommentUseCase extends CommentUseCase {
+  constructor(
+    @inject(CommentService) private readonly service: CommentService
+  ) {
+    super();
+  }
+
+  public async execute(queries: SubentityQueries): Promise<Comment> {
+    const deletedComment: Comment | null = await this.handleQueryStrategy(
+      queries
+    );
+    this.assertObjectIsFound(deletedComment);
+    return deletedComment;
+  }
+
+  /**
+   * Deletes a comment by its string-based identifier after validating it as a valid ObjectId.
+   *
+   * @private
+   * @param {string} query - The string representing the comment's ID.
+   * @returns {Promise<Comment | null>} A promise resolving to the deleted comment, or null if not found.
+   * @throws {BadRequestError} Thrown if the ID is invalid.
+   */
+  private async deleteById(query: string): Promise<Comment | null> {
+    const id = this.validateObjectId(query);
+    return await this.service.deleteCommentById(id);
+  }
+
+  /**
+   * Deletes a comment by validating and using both the target ID and author ID provided as strings.
+   *
+   * @private
+   * @param {string} targetQuery - The string representing the target entity's ID.
+   * @param {string} authorQuery - The string representing the author's ID.
+   * @returns {Promise<Comment | null>} A promise resolving to the deleted comment, or null if not found.
+   * @throws {BadRequestError} Thrown if either ID is invalid.
+   */
+  private async deleteByTargetIdAndAuthorId(
+    targetQuery: string,
+    authorQuery: string
+  ): Promise<Comment | null> {
+    const [targetId, authorId] = this.validateQueries(targetQuery, authorQuery);
+    return await this.service.deleteCommentByTargetIdAndAuthorId(
+      targetId,
+      authorId
+    );
+  }
+
+  /**
+   * Determines and executes the appropriate deletion strategy for a comment based on the provided query parameters.
+   *
+   * Accepts flexible query input and chooses whether to delete by ID or by a combination of target ID and author ID.
+   * If neither strategy is applicable, throws a BadRequestError.
+   *
+   * @protected
+   * @param {SubentityQueries} queries - An object potentially containing `id`, `targetId`, and `authorId`.
+   * @returns {Promise<Comment | null>} A promise resolving to the deleted comment, or null if not found.
+   * @throws {BadRequestError} Thrown if neither a valid `id` nor a valid pair of `targetId` and `authorId` is provided.
+   */
+  protected async handleQueryStrategy(
+    queries: SubentityQueries
+  ): Promise<Comment | null> {
+    const { id, targetId, authorId } = queries;
+
+    if (id) {
+      return this.deleteById(id);
+    }
+
+    if (targetId && authorId) {
+      return this.deleteByTargetIdAndAuthorId(targetId, authorId);
+    }
+
+    throw new BadRequestError(
+      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+    );
+  }
+}
