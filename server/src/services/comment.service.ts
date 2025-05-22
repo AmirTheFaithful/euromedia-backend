@@ -56,7 +56,7 @@ export default class CommentService {
    * @param {CreateCommentDTO} data - The data required to create a new comment.
    * @returns {Promise<Comment>} A promise resolving to the created comment.
    */
-  public async createComment(data: CreateCommentDTO) {
+  public createComment(data: CreateCommentDTO) {
     return this.repo.createComment(data);
   }
 
