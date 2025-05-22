@@ -57,8 +57,8 @@ export default class CommentRepo {
    * @param {CreateCommentDTO} comment - Data transfer object containing new comment data.
    * @returns {Promise<Comment>} - Newly created comment.
    */
-  public async createComment(comment: CreateCommentDTO): Promise<Comment> {
-    return await this.model.instance.create(comment);
+  public createComment(comment: CreateCommentDTO): Comment {
+    return new this.model.instance(comment);
   }
 
   /**
