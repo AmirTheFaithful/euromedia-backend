@@ -7,11 +7,17 @@ import { ObjectId } from "mongodb";
  * The 'type' field defines what kind of block this is, and 'content' contains the actual data.
  *
  * @typedef {Object} PostBlock
- * @property {string} type - The type of the content block (e.g., 'text', 'image').
+ * @property {'text' | 'blockquote' | 'imageURL' | 'videoURL' | 'imageGroupURL' | 'videoGroupURL'} type - The type of the content block (e.g., 'text', 'image').
  * @property {string} content - The actual content of the block (e.g., text, URL, etc.).
  */
 export type PostBlock = {
-  type: string;
+  type:
+    | "text"
+    | "blockquote"
+    | "imageURL"
+    | "videoURL"
+    | "imageGroupURL"
+    | "videoGroupURL";
   content: string;
 };
 
@@ -30,15 +36,12 @@ export type PostBlocks = PostBlock[];
  *
  * @interface Post
  * @extends Document
- * @property {Object} meta - Metadata associated with the post.
- * @property {ObjectId} meta.authorId - The ID of the author of the post.
- * @property {Date} meta.createdAt - The date the post was created.
- * @property {boolean} meta.updated - Flag indicating if the post has been updated.
- * @property {Date} meta.updatedAt - The date the post was last updated.
- * @property {Array<string>} meta.tags - Tags associated with the post.
- * @property {Object} content - The actual content of the post.
- * @property {string} content.title - The title of the post.
- * @property {PostBlocks} content.blocks - An array of content blocks in the post.
+ * @property {ObjectId} authorId - The ID of the author of the post.
+ * @property {Date} createdAt - The date the post was created.
+ * @property {boolean} updated - Flag indicating if the post has been updated.
+ * @property {Date} updatedAt - The date the post was last updated.
+ * @property {Array<string>} tags - Tags associated with the post.
+ * @property {PostBlocks} blocks - An array of content blocks that structure post.
  */
 export interface Post extends Document {
   authorId: ObjectId;
