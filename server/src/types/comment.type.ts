@@ -1,6 +1,8 @@
 import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
+import { Replace } from "../types/utils.type";
+
 /**
  * Represents a block of content within a comment.
  *
@@ -49,7 +51,11 @@ export type Comments = Comment[];
  *
  * @typedef {Comment} CreateCommentDTO
  */
-export type CreateCommentDTO = Comment;
+export type CreateCommentDTO = {
+  targetId: ObjectId;
+  authorId: ObjectId;
+  content: CommentBlock;
+};
 
 /**
  * Data Transfer Object for updating an existing comment.
@@ -59,3 +65,8 @@ export type CreateCommentDTO = Comment;
  * @property {CommentBlock} content - Updated content block of the comment.
  */
 export type UpdateCommentDTO = Pick<Comment, "content">;
+
+export type CreateCommentDTOInput = Replace<
+  Comment,
+  { targetId: string; authorId: string }
+>;
