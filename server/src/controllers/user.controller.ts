@@ -22,23 +22,25 @@ class UserController {
 
   public getUsers = asyncHandler(
     async (
-      req: Request<any, User | User, any, Queries>,
+      req: Request<any, User | Users, any, Queries>,
       res: Response<ResponseBody<User | Users>>
     ) => {
       const fetchUserUseCase = this.container.get(FetchUserUseCase);
       const data: User | Users = await fetchUserUseCase.execute(req.query);
 
-      let responseMessage: string = "Fetch success.";
-      const cachedKey: string = req.query.id ?? req.query.email!;
+      const cachedKey: string | undefined = req.query.id ?? req.query.email;
+      const isCached = cachedKey && cache.has(cachedKey);
 
-      // If query is provided and a cached user was fetched - reflect that in the response and send a specific header..
-      if (cachedKey && cache.has(cachedKey)) {
-        responseMessage += " (cached)";
-        res.setHeader("X-Cache-Status", "HIT");
-      } else {
-        res.setHeader("X-Cache-Status", "MISS");
-        cache.set(cachedKey, data); // Cache the user.
+      res.setHeader("X-Cache-Status", isCached ? "HIT" : "MISS");
+
+      // If query is provided and a cached user was fetched - reflect that in the response and send a specific header.
+      if (cachedKey && !isCached && !Array.isArray(data)) {
+        cache.set(cachedKey, data);
       }
+
+      const responseMessage: string = `Fetch success${
+        isCached ? " (cached)" : ""
+      }.`;
 
       res.status(200).json({ data, message: responseMessage }).end();
     }
@@ -55,11 +57,16 @@ class UserController {
     }
   );
 
-  public deleteUser = asyncHandler(async (req: Request, res: Response) => {
-    const deleteUserUseCase = this.container.get(DeleteUserUseCase);
-    const data: User = await deleteUserUseCase.execute(req.query);
-    res.status(200).json({ data, message: "Deletion success." }).end();
-  });
+  public deleteUser = asyncHandler(
+    async (
+      req: Request<any, User, any, Queries>,
+      res: Response<ResponseBody<User>>
+    ) => {
+      const deleteUserUseCase = this.container.get(DeleteUserUseCase);
+      const data: User = await deleteUserUseCase.execute(req.query);
+      res.status(200).json({ data, message: "Deletion success." }).end();
+    }
+  );
 }
 
 export default new UserController();
