@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
+import { ResponseBody } from "../types/api.type";
 import { User, Users } from "../types/user.type";
 import {
   FetchUserUseCase,
@@ -11,11 +12,6 @@ import {
   Body,
 } from "../use-cases/user.use-case";
 import { cache } from "../config/lru";
-
-type ResponseBody<DataType> = {
-  data: DataType;
-  message: string;
-};
 
 class UserController {
   constructor(private readonly container = Container()) {}
