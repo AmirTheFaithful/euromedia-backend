@@ -2,62 +2,15 @@ import { injectable, inject } from "inversify";
 import { ObjectId } from "mongodb";
 
 import ReactionService from "../services/reaction.service";
-import { BadRequestError, NotFoundError } from "../errors/http-errors";
+import { BadRequestError } from "../errors/http-errors";
 import {
   Reaction,
   CreateReactionInputDTO,
   CreateReactionDTO,
   UpdateReactionDTO,
 } from "../types/reaction.type";
+import { SubEntityUseCase } from "./APIUseCase";
 import { SubentityQueries } from "../types/queries.type";
-
-/**
- * Abstract base class for all reaction-related use cases.
- *
- * Provides access to the core reaction service and shared logic
- * for concrete implementations such as create, update, fetch, or delete operations.
- *
- * @abstract
- */
-export abstract class ReactionUseCase {
-  protected constructor(protected readonly service: ReactionService) {}
-
-  /**
-   * Convert a string to a valid ObjectID instance, if the provided value is valid.
-   *
-   * @param {string} id - Value to be converted to the ObjectID.
-   * @returns {ObjectID} - An instance of the ObjectID.
-   * @throws {BadRequestError} - Exception if the invalid vale has been provided.
-   */
-  protected validateObjectId(id: string): ObjectId {
-    if (!ObjectId.isValid(id)) {
-      throw new BadRequestError(`Identifier '${id}' is not valid ObjectId.`);
-    }
-
-    return new ObjectId(id);
-  }
-
-  /**
-   * Asserts that the provided object is not null or undefined.
-   *
-   * @template T - The type of the object being checked.
-   * @param {T} object The object to check for existence.
-   * @throws {NotFoundError} If the object is null or undefined.
-   * @asserts object is T. Ensures the object is defined after this call.
-   */
-  protected assertObjectIsFound<T>(object: T | null): asserts object is T {
-    if (!object) {
-      throw new NotFoundError("Object not found.");
-    }
-  }
-
-  protected validateQueries(
-    targetId: string,
-    authorId: string
-  ): [ObjectId, ObjectId] {
-    return [this.validateObjectId(targetId), this.validateObjectId(authorId)];
-  }
-}
 
 /**
  * Use case for retrieving a single reaction or a group of reactions
@@ -65,11 +18,15 @@ export abstract class ReactionUseCase {
  *
  * Delegates the fetching logic to the appropriate service methods
  * depending on the provided query combination.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class FetchReactionUseCase extends ReactionUseCase {
-  constructor(@inject(ReactionService) service: ReactionService) {
-    super(service);
+export class FetchReactionUseCase extends SubEntityUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
   }
 
   public async execute(queries: SubentityQueries) {
@@ -153,11 +110,15 @@ export class FetchReactionUseCase extends ReactionUseCase {
  * Use case for creating a new reaction.
  *
  * Validates the input payload and delegates the creation logic to the service.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class CreateReactionUseCase extends ReactionUseCase {
-  constructor(@inject(ReactionService) service: ReactionService) {
-    super(service);
+export class CreateReactionUseCase extends SubEntityUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
   }
 
   public async execute(input: CreateReactionInputDTO): Promise<Reaction> {
@@ -207,11 +168,15 @@ export class CreateReactionUseCase extends ReactionUseCase {
  *
  * Resolves the target reaction either by ID or by a (targetId and authorId) pair,
  * validates the input, and updates the reaction accordingly.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class UpdateReactionUseCase extends ReactionUseCase {
-  constructor(@inject(ReactionService) service: ReactionService) {
-    super(service);
+export class UpdateReactionUseCase extends SubEntityUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
   }
 
   public async execute(
@@ -308,11 +273,15 @@ export class UpdateReactionUseCase extends ReactionUseCase {
  * Use case for deleting a reaction.
  *
  * Supports deletion by reaction ID or by a combination of targetId and authorId.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class DeleteReactionUseCase extends ReactionUseCase {
-  constructor(@inject(ReactionService) service: ReactionService) {
-    super(service);
+export class DeleteReactionUseCase extends SubEntityUseCase {
+  constructor(
+    @inject(ReactionService) private readonly service: ReactionService
+  ) {
+    super();
   }
 
   public async execute(input: SubentityQueries): Promise<Reaction> {
