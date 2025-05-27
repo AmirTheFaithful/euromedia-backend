@@ -9,6 +9,7 @@ import {
   CreatePostDTO,
   UpdatePostDTO,
 } from "../types/post.type";
+import { APIUseCase } from "./APIUseCase";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
 import { cache } from "../config/lru";
 
@@ -18,6 +19,7 @@ import { cache } from "../config/lru";
  * @interface Queries
  * @property {string=} id - Optional parameter that threated as an ID of the post to be found.
  * @property {string=} authorId - Optional parameter that threated as an ID of the user to find all their posts.
+ * @property {string[]=} tags - Optional parameter that is treated as a list of tags used to filter posts.
  */
 export interface Queries {
   id?: string;
@@ -26,40 +28,28 @@ export interface Queries {
 }
 
 /**
- * Abstract base class for post-related use-cases.
- *
- * Provides utility methods such as ObjectId validation.
- */
-class PostUseCase {
-  /**
-   * Convert a string to a valid ObjectID instance, if the provided value is valid.
-   *
-   * @param {string} id - value to be converted to the ObjectID.
-   * @returns {ObjectID} - An instance of the ObjectID.
-   * @throws {BadRequestError} - Exception if the invalid vale has been provided.
-   */
-  protected validateObjectId(id: string): ObjectId {
-    if (!id || !ObjectId.isValid(id)) {
-      throw new BadRequestError(`Query '${id}' is not valid id.`);
-    }
-
-    return new ObjectId(id);
-  }
-}
-
-/**
  * Fetch use case for retrieving posts.
  *
  * Supports fetching post/s by their ID or author's ID or retrieving all posts.
+ *
+ * @extends APIUseCase
  */
 @injectable()
-export class FetchPostUseCase extends PostUseCase {
+export class FetchPostUseCase extends APIUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
 
-  public async execute(input: Queries) {
-    const { authorId, tags, id } = input;
+  public async execute(input: Queries): Promise<Post | Posts> {
+    const data: Post | Posts | null = await this.handleQueryStrategy(input);
+    this.assertObjectIsFound(data);
+    return data;
+  }
+
+  private async handleQueryStrategy(
+    queries: Queries
+  ): Promise<Post | Posts | null> {
+    const { authorId, tags, id } = queries;
 
     if (id) {
       return await this.getById(id);
@@ -149,9 +139,11 @@ export class FetchPostUseCase extends PostUseCase {
  * Create post use case for creating instances of new posts.
  *
  * Performs assembling, validation operations on the posts and saving them to the DB.
+ *
+ * @extends APIUseCase
  */
 @injectable()
-export class CreatePostUseCase extends PostUseCase {
+export class CreatePostUseCase extends APIUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
@@ -193,9 +185,11 @@ export class CreatePostUseCase extends PostUseCase {
  * Update post use case for modification of posts.
  *
  * Performs basic-level data validation to be updated and saves changes to the DB.
+ *
+ * @extends APIUseCase
  */
 @injectable()
-export class UpdatePostUseCase extends PostUseCase {
+export class UpdatePostUseCase extends APIUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
@@ -256,9 +250,11 @@ export class UpdatePostUseCase extends PostUseCase {
  * Delete post use case for performing deletion process of posts by their unique ID.
  *
  * Performs validation of the query 'id' parameter and deletes a post from the DB.
+ *
+ * @extends APIUseCase
  */
 @injectable()
-export class DeletePostUseCase extends PostUseCase {
+export class DeletePostUseCase extends APIUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
