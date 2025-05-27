@@ -56,3 +56,48 @@ export abstract class APIUseCase {
     }
   }
 }
+
+/**
+ * Abstract base class for use cases involving nested or subordinate entities.
+ *
+ * Extends `APIUseCase` by reusing its validation utilities in contexts where
+ * both a parent (target) and a child (author or actor) identifier are required.
+ * Typically used in scenarios such as comments, replies, or other sub-structures
+ * that are tightly coupled to a primary entity.
+ *
+ * Meant to be subclassed by domain-specific use cases that operate on such sub-entities
+ * and require consistent ID validation and error feedback mechanisms.
+ *
+ * @abstract
+ *
+ * @example
+ * class AddCommentUseCase extends SubEntityUseCase {
+ *   async execute(postId: string, authorId: string, content: string) {
+ *     const [validatedPostId, validatedAuthorId] = this.validateQueries(postId, authorId);
+ *     const post = await this.postRepository.findById(validatedPostId);
+ *     this.assertObjectIsFound(post);
+ *     return this.commentRepository.create({
+ *       postId: validatedPostId,
+ *       authorId: validatedAuthorId,
+ *       content
+ *     });
+ *   }
+ * }
+ */
+export abstract class SubEntityUseCase extends APIUseCase {
+  /**
+   * Validates and converts the provided `targetId` and `authorId` strings into MongoDB ObjectId instances.
+   *
+   * @protected
+   * @param {string} targetId - The identifier of the target entity to be validated.
+   * @param {string} authorId - The identifier of the author entity to be validated.
+   * @returns {[ObjectId, ObjectId]} A tuple containing validated ObjectId instances for the target and author.
+   * @throws {BadRequestError} If either `targetId` or `authorId` is not a valid ObjectId string.
+   */
+  protected validateQueries(
+    targetId: string,
+    authorId: string
+  ): [ObjectId, ObjectId] {
+    return [this.validateObjectId(targetId), this.validateObjectId(authorId)];
+  }
+}
