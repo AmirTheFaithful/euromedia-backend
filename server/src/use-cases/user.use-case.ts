@@ -1,9 +1,9 @@
 import { injectable, inject } from "inversify";
-import { ObjectId } from "mongodb";
 
 import UserService from "../services/user.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
 import { User, Users, UpdateUserDTO } from "../types/user.type";
+import { APIUseCase } from "./APIUseCase";
 import { cache } from "../config/lru";
 
 export interface Queries {
@@ -15,15 +15,7 @@ export interface Body {
   data: UpdateUserDTO;
 }
 
-class UserUseCase {
-  protected validateObjectId(id: string): never | ObjectId {
-    if (!id || !ObjectId.isValid(id)) {
-      throw new BadRequestError(`Query ${id} is not valid id.`);
-    }
-
-    return new ObjectId(id);
-  }
-
+abstract class UserUseCase extends APIUseCase {
   protected validateEmail(email: string): never | string {
     const emailRegEx: RegExp =
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
