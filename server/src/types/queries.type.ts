@@ -14,3 +14,18 @@ export interface SubentityQueries {
   authorId?: string;
   targetId?: string;
 }
+
+/**
+ * Defines the structure of query parameters used to retrieve a media unit.
+ *
+ * A media entity typically represents user-generated content such as a post,
+ * photo, or video, which may serve as the parent of subentities like comments or reactions.
+ *
+ * @typedef {Object} MediaEntityQueries
+ * @property {string} id - Optional unique identifier of the media entity.
+ * @property {string} authorId - Optional user ID of the creator of the media entity.
+ */
+export interface MediaEntityQueries {
+  id?: string;
+  authorId?: string;
+}
