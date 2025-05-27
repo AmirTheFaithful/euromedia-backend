@@ -1,5 +1,4 @@
 import { injectable, inject } from "inversify";
-import { ObjectId } from "mongodb";
 
 import CommentService from "../services/comment.service";
 import {
@@ -9,63 +8,24 @@ import {
   UpdateCommentDTO,
   CreateCommentDTOInput,
 } from "../types/comment.type";
+import { SubEntityUseCase } from "./APIUseCase";
 import { SubentityQueries } from "../types/queries.type";
-import { NotFoundError, BadRequestError } from "../errors/http-errors";
+import { BadRequestError } from "../errors/http-errors";
 
 /**
- * Abstract base class for all comment-related use cases.
- * Provides shared validation and assertion utilities for comment use case implementations.
+ * Use case class responsible for retrieving comments.
  *
- * @abstract
+ * Extends the base SubEntityUseCase and uses CommentService
+ * to handle the logic of fetching single or multiple comments based on query parameters.
+ *
+ * Supports fetching by comment ID, target ID, or a combination of target ID and author ID.
+ *
+ * Designed for use with dependency injection via InversifyJS.
+ *
+ * @extends SubEntityUseCase
  */
-abstract class CommentUseCase {
-  /**
-   * Convert a string to a valid ObjectID instance, if the provided value is valid.
-   *
-   * @param {string} id - Value to be converted to the ObjectID.
-   * @returns {ObjectID} - An instance of the ObjectID.
-   * @throws {BadRequestError} - Exception if the invalid vale has been provided.
-   */
-  protected validateObjectId(id: string): ObjectId {
-    if (!ObjectId.isValid(id)) {
-      throw new BadRequestError(`Identifier '${id}' is not valid ObjectId.`);
-    }
-
-    return new ObjectId(id);
-  }
-
-  /**
-   * Asserts that the provided object is not null or undefined.
-   *
-   * @template T - The type of the object being checked.
-   * @param {T} object The object to check for existence.
-   * @throws {NotFoundError} If the object is null or undefined.
-   * @asserts object is T. Ensures the object is defined after this call.
-   */
-  protected assertObjectIsFound<T>(object: T | null): asserts object is T {
-    if (!object) {
-      throw new NotFoundError("Object not found.");
-    }
-  }
-
-  /**
-   * Validates and converts the provided `targetId` and `authorId` strings into MongoDB ObjectId instances.
-   *
-   * @param {string} targetId - The identifier of the target entity to be validated.
-   * @param {string} authorId - The identifier of the author entity to be validated.
-   * @returns {[ObjectId, ObjectId]} A tuple containing validated ObjectId instances for the target and author.
-   * @throws {BadRequestError} If either `targetId` or `authorId` is not a valid ObjectId string.
-   */
-  protected validateQueries(
-    targetId: string,
-    authorId: string
-  ): [ObjectId, ObjectId] {
-    return [this.validateObjectId(targetId), this.validateObjectId(authorId)];
-  }
-}
-
 @injectable()
-export class FetchCommentsUseCase extends CommentUseCase {
+export class FetchCommentsUseCase extends SubEntityUseCase {
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -153,7 +113,7 @@ export class FetchCommentsUseCase extends CommentUseCase {
     }
 
     throw new BadRequestError(
-      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+      "No queries provided. Please provide either 'id' or 'targetId' together with 'authorId', or just 'targetId'."
     );
   }
 }
@@ -161,13 +121,15 @@ export class FetchCommentsUseCase extends CommentUseCase {
 /**
  * Use case class responsible for creating new comments.
  *
- * Extends the base CommentUseCase and uses CommentService
+ * Extends the base APIUseCase and uses CommentService
  * to handle the creation logic of comments in the system.
  *
  * Designed for use with dependency injection.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class CreateCommentUseCase extends CommentUseCase {
+export class CreateCommentUseCase extends SubEntityUseCase {
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -229,13 +191,15 @@ export class CreateCommentUseCase extends CommentUseCase {
 /**
  * Use case class responsible for updating comments.
  *
- * Extends the base CommentUseCase and leverages CommentService
+ * Extends the base APIUseCase and leverages CommentService
  * to perform update operations following business logic.
  *
  * Designed to be used with dependency injection.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class UpdateCommentUseCase extends CommentUseCase {
+export class UpdateCommentUseCase extends SubEntityUseCase {
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -338,7 +302,7 @@ export class UpdateCommentUseCase extends CommentUseCase {
     }
 
     throw new BadRequestError(
-      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+      "No queries provided. Please provide either 'id' or 'targetId' together with 'authorId', or just 'targetId'."
     );
   }
 }
@@ -350,9 +314,11 @@ export class UpdateCommentUseCase extends CommentUseCase {
  * coordinating deletion of comments by ID or by (targetId + authorId) strategy.
  *
  * Designed for use in a dependency injection context.
+ *
+ * @extends SubEntityUseCase
  */
 @injectable()
-export class DeleteCommentUseCase extends CommentUseCase {
+export class DeleteCommentUseCase extends SubEntityUseCase {
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -425,7 +391,7 @@ export class DeleteCommentUseCase extends CommentUseCase {
     }
 
     throw new BadRequestError(
-      "No queries provided. Either 'id', 'targetId' or 'authorId' should be provided."
+      "No queries provided. Please provide either 'id' or 'targetId' together with 'authorId', or just 'targetId'."
     );
   }
 }
