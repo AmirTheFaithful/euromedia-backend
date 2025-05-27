@@ -3,33 +3,35 @@ import { Request, Response } from "express";
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
 import { FetchPostUseCase } from "../use-cases/post.use-case";
+import { ResponseBody } from "../types/api.type";
+import { MediaEntityQueries } from "../types/queries.type";
 import { Post, Posts } from "../types/post.type";
 import { cache } from "../config/lru";
-
-interface Queries {
-  id?: string;
-  authorId?: string;
-}
 
 class PostController {
   constructor(private readonly container = Container()) {}
 
   public getPosts = asyncHandler(
-    async (req: Request<any, Post | Posts, any, Queries>, res: Response) => {
+    async (
+      req: Request<any, Post | Posts, any, MediaEntityQueries>,
+      res: Response<ResponseBody<Post | Posts>>
+    ) => {
       const fetchPostUseCase = this.container.get(FetchPostUseCase);
-      let data: Post | Posts | null = await fetchPostUseCase.execute(req.body);
+      const data: Post | Posts = await fetchPostUseCase.execute(req.body);
 
-      let responseMessage: string = "fetch success";
       const cachedKey: string | undefined = req.query.id ?? req.query.authorId;
+      const isCached = cachedKey && cache.has(cachedKey);
 
-      if (cachedKey && cache.has(cachedKey)) {
-        responseMessage += " (cached).";
-        res.setHeader("X-Cache-Status", "HIT");
-      } else if (cachedKey && !cache.has(cachedKey)) {
-        responseMessage += ".";
-        res.setHeader("X-Cache-Status", "MISS");
+      res.setHeader("X-Cache-Status", isCached ? "HIT" : "MISS");
+
+      // If query is provided and a cached post was fetched - reflect that in the response and send a specific header.
+      if (cachedKey && !isCached && !Array.isArray(data)) {
         cache.set(cachedKey, data);
       }
+
+      const responseMessage: string = `Fetch success${
+        isCached ? " (cached)" : ""
+      }`;
 
       res.status(200).json({ data, message: responseMessage }).end();
     }
