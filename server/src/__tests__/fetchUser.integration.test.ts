@@ -1,9 +1,7 @@
-import { connect, connection } from "mongoose";
 import request, { Response } from "supertest";
 import { Application } from "express";
 
 import app from "../setup/app";
-import { mongo } from "../config/env";
 import UserModel from "../models/user.model";
 import { User } from "../types/user.type";
 
@@ -17,9 +15,6 @@ jest.setTimeout(16000); // Increase testing estimated timeout to survive slow as
 
 // Connect to the test DB and set a dummy user object to the cluster.
 beforeAll(async (): Promise<void> => {
-  await connect(mongo.test_uri);
-  await testModel.deleteMany();
-
   testApp = app();
 
   dummyUser = await new testModel({
@@ -33,11 +28,6 @@ beforeAll(async (): Promise<void> => {
       verified: false,
     },
   }).save();
-});
-
-// Cleanup the cluster after all tests.
-afterAll(async (): Promise<void> => {
-  await connection.close();
 });
 
 // Tests using id as query:
@@ -147,7 +137,7 @@ describe("GET all users present in the DB.", () => {
   });
 
   it("should return empty array.", async (): Promise<void> => {
-    // Cleanup the cluster to make sure that DB is completelly empty.
+    // Cleanup DB.
     await testModel.deleteMany();
 
     const response = await request(testApp).get(baseURL);
