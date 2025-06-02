@@ -1,3 +1,5 @@
+import { UpdateUserDTO } from "../types/user.type";
+
 /**
  * Represents a standardized structure for API responses.
  *
@@ -9,3 +11,14 @@ export type ResponseBody<DataType> = {
   data: DataType;
   message: string;
 };
+
+/**
+ * Request body for updating a user.
+ * To be used only on controllers or higher API levels of the backend.
+ *
+ * @typedef {Object} UpdateUserRequestBody
+ * @property {UpdateUserDTO} data - Data used to update the user.
+ */
+export interface UpdateUserRequestBody {
+  data: UpdateUserDTO;
+}
