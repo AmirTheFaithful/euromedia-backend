@@ -24,7 +24,32 @@ import { cache } from "../config/lru";
 export interface Queries {
   id?: string;
   authorId?: string;
-  tags?: string[];
+  tags?: object;
+}
+
+/**
+ * Abstract base class for all post-related use cases.
+ *
+ * Intended to be extended by specific post use case implementations.
+ * Provides common validation logic and inherits core API use case behavior.
+ *
+ * To be used only in the application layer (use cases), not in controllers or infrastructure.
+ *
+ * @abstract
+ * @class
+ * @extends APIUseCase
+ */
+abstract class PostUseCase extends APIUseCase {
+  protected assertIdIsString(id: string | undefined): asserts id is string {
+    // Not presented; Is not type of string; Is not convertable to ObjectId;
+    if (!id || typeof id !== "string" || id.length !== 24) {
+      throw new BadRequestError("Query 'id' is not valid identifier.");
+    }
+  }
+
+  constructor() {
+    super();
+  }
 }
 
 /**
@@ -32,10 +57,10 @@ export interface Queries {
  *
  * Supports fetching post/s by their ID or author's ID or retrieving all posts.
  *
- * @extends APIUseCase
+ * @extends PostUseCase
  */
 @injectable()
-export class FetchPostUseCase extends APIUseCase {
+export class FetchPostUseCase extends PostUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
@@ -117,12 +142,14 @@ export class FetchPostUseCase extends APIUseCase {
    * @throws {BadRequestError} - Error of invalid queries, which doesn't contain any specified tag.
    * @returns {Promise<Posts>} - Array of posts found by the tags, otherwise an empty array.
    */
-  private async getByTags(tags: string[]): Promise<Posts> {
-    if (tags.length === 0) {
+  private async getByTags(tags: object): Promise<Posts> {
+    const array: string[] = Object.values(tags);
+    console.log(array);
+    if (array.length === 0) {
       throw new BadRequestError("'tags' query parameter missing.");
     }
 
-    return this.service.getPostsByTags(tags);
+    return this.service.getPostsByTags(array);
   }
 
   /**
@@ -140,10 +167,10 @@ export class FetchPostUseCase extends APIUseCase {
  *
  * Performs assembling, validation operations on the posts and saving them to the DB.
  *
- * @extends APIUseCase
+ * @extends PostUseCase
  */
 @injectable()
-export class CreatePostUseCase extends APIUseCase {
+export class CreatePostUseCase extends PostUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
@@ -186,10 +213,10 @@ export class CreatePostUseCase extends APIUseCase {
  *
  * Performs basic-level data validation to be updated and saves changes to the DB.
  *
- * @extends APIUseCase
+ * @extends PostUseCase
  */
 @injectable()
-export class UpdatePostUseCase extends APIUseCase {
+export class UpdatePostUseCase extends PostUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
@@ -202,9 +229,10 @@ export class UpdatePostUseCase extends APIUseCase {
    * @returns {Promise<Post>} - Updated post.
    */
   public async execute(
-    query: { id: string },
+    query: { id?: string },
     body: UpdatePostDTO
   ): Promise<Post> {
+    this.assertIdIsString(query.id);
     const id: ObjectId = this.validateObjectId(query.id);
     this.validateUpdateData(body.blocks);
     return this.performPostUpdate(id, body);
@@ -251,16 +279,17 @@ export class UpdatePostUseCase extends APIUseCase {
  *
  * Performs validation of the query 'id' parameter and deletes a post from the DB.
  *
- * @extends APIUseCase
+ * @extends PostUseCase
  */
 @injectable()
-export class DeletePostUseCase extends APIUseCase {
+export class DeletePostUseCase extends PostUseCase {
   constructor(@inject(PostService) private readonly service: PostService) {
     super();
   }
 
-  public async execute(input: { id: string }): Promise<Post> {
-    const id: ObjectId = this.validateObjectId(input.id);
+  public async execute(query: { id?: string }): Promise<Post> {
+    this.assertIdIsString(query.id);
+    const id: ObjectId = this.validateObjectId(query.id);
     return this.performDeletionRequest(id);
   }
 
