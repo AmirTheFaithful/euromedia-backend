@@ -2,18 +2,11 @@ import { injectable, inject } from "inversify";
 
 import UserService from "../services/user.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
-import { User, Users, UpdateUserDTO } from "../types/user.type";
+import { User, Users } from "../types/user.type";
+import { UpdateUserRequestBody } from "../types/api.type";
+import { UserQueries } from "../types/queries.type";
 import { APIUseCase } from "./APIUseCase";
 import { cache } from "../config/lru";
-
-export interface Queries {
-  id?: string;
-  email?: string;
-}
-
-export interface Body {
-  data: UpdateUserDTO;
-}
 
 abstract class UserUseCase extends APIUseCase {
   protected validateEmail(email: string): never | string {
@@ -34,7 +27,7 @@ export class FetchUserUseCase extends UserUseCase {
     super();
   }
 
-  public async execute(input: Queries) {
+  public async execute(input: UserQueries) {
     const { id, email } = input;
 
     if (id) {
@@ -86,9 +79,9 @@ export class UpdateUserUseCase extends UserUseCase {
     super();
   }
 
-  public async execute(queries: Queries, body: Body) {
-    const { id, email }: Queries = queries;
-    const { data }: Body = body;
+  public async execute(queries: UserQueries, body: UpdateUserRequestBody) {
+    const { id, email }: UserQueries = queries;
+    const { data }: UpdateUserRequestBody = body;
 
     let updatedUser: User | null = null;
 
@@ -117,8 +110,8 @@ export class DeleteUserUseCase extends UserUseCase {
     super();
   }
 
-  public async execute(query: Queries): Promise<User> {
-    const { id, email }: Queries = query;
+  public async execute(query: UserQueries): Promise<User> {
+    const { id, email }: UserQueries = query;
 
     let user: User | null = null;
     if (id) {
