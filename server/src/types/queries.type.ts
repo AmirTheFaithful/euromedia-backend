@@ -29,3 +29,16 @@ export interface MediaEntityQueries {
   id?: string;
   authorId?: string;
 }
+
+/**
+ * Represents query parameters for any operations over user document.
+ *
+ * @typedef {Object} UserQueries
+ * @property {string} id - Optional unique identifier of the user.
+ * @property {string} email - Optional email address of the user.
+ *
+ */
+export interface UserQueries {
+  id?: string;
+  email?: string;
+}
