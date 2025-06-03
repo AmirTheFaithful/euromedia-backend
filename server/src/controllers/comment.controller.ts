@@ -7,6 +7,7 @@ import {
   FetchCommentsUseCase,
   CreateCommentUseCase,
   UpdateCommentUseCase,
+  DeleteCommentUseCase,
 } from "../use-cases/comment.use-case";
 import { SubentityQueries } from "../types/queries.type";
 import { ResponseBody } from "../types/api.type";
@@ -77,6 +78,17 @@ class CommentController {
         req.body
       );
       res.status(200).json({ data, message: "Update success." });
+    }
+  );
+
+  public deleteComment = asyncHandler(
+    async (
+      req: Request<any, ResponseBody<Comment>, any, SubentityQueries>,
+      res: Response<ResponseBody<Comment>>
+    ) => {
+      const deleteCommentUseCase = this.container.get(DeleteCommentUseCase);
+      const data: Comment = await deleteCommentUseCase.execute(req.query);
+      res.status(200).json({ data, message: "Delete success." });
     }
   );
 }
