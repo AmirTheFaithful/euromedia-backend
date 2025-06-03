@@ -4,12 +4,12 @@ import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ResponseBody } from "../types/api.type";
 import { User, Users } from "../types/user.type";
+import { UserQueries } from "../types/queries.type";
+import { UpdateUserRequestBody } from "../types/api.type";
 import {
   FetchUserUseCase,
   UpdateUserUseCase,
   DeleteUserUseCase,
-  Queries,
-  Body,
 } from "../use-cases/user.use-case";
 import { cache } from "../config/lru";
 
@@ -18,7 +18,7 @@ class UserController {
 
   public getUsers = asyncHandler(
     async (
-      req: Request<any, User | Users, any, Queries>,
+      req: Request<any, User | Users, any, UserQueries>,
       res: Response<ResponseBody<User | Users>>
     ) => {
       const fetchUserUseCase = this.container.get(FetchUserUseCase);
@@ -44,7 +44,7 @@ class UserController {
 
   public updateUser = asyncHandler(
     async (
-      req: Request<any, User, Body, Queries>,
+      req: Request<any, User, UpdateUserRequestBody, UserQueries>,
       res: Response<ResponseBody<User>>
     ) => {
       const updateUserUseCase = this.container.get(UpdateUserUseCase);
@@ -55,7 +55,7 @@ class UserController {
 
   public deleteUser = asyncHandler(
     async (
-      req: Request<any, User, any, Queries>,
+      req: Request<any, User, any, UserQueries>,
       res: Response<ResponseBody<User>>
     ) => {
       const deleteUserUseCase = this.container.get(DeleteUserUseCase);
