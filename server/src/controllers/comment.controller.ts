@@ -3,10 +3,17 @@ import { Request, Response } from "express";
 import Container from "../containers";
 import { getCachedKey } from "../utils/getCachedKey";
 import { asyncHandler } from "../utils/asyncHandler";
-import { FetchCommentsUseCase } from "../use-cases/comment.use-case";
+import {
+  FetchCommentsUseCase,
+  CreateCommentUseCase,
+} from "../use-cases/comment.use-case";
 import { SubentityQueries } from "../types/queries.type";
 import { ResponseBody } from "../types/api.type";
-import { Comment, Comments } from "../types/comment.type";
+import {
+  CreateCommentDTOInput,
+  Comment,
+  Comments,
+} from "../types/comment.type";
 import { cache } from "../config/lru";
 
 class CommentController {
@@ -38,6 +45,17 @@ class CommentController {
 
       const message: string = `Fetch success ${isCached ? "(cached)" : ""}.`;
       res.status(200).json({ data, message });
+    }
+  );
+
+  public createComment = asyncHandler(
+    async (
+      req: Request<any, ResponseBody<Comment>, CreateCommentDTOInput>,
+      res: Response<ResponseBody<Comment>>
+    ) => {
+      const createCommentUseCase = this.container.get(CreateCommentUseCase);
+      const data: Comment = await createCommentUseCase.execute(req.body);
+      res.status(201).json({ data, message: "Post success." });
     }
   );
 }
