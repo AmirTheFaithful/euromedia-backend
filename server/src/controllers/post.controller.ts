@@ -66,6 +66,17 @@ class PostController {
       res.status(200).json({ data: updatedPost, message: "Update Success." });
     }
   );
+
+  public deletePost = asyncHandler(
+    async (
+      req: Request<any, ResponseBody<Post>, any, { id?: string }>,
+      res: Response<ResponseBody<Post>>
+    ) => {
+      const deletePostUseCase = this.container.get(DeletePostUseCase);
+      const post: Post | null = await deletePostUseCase.execute(req.query);
+      res.status(200).json({ data: post, message: "Delete Success." });
+    }
+  );
 }
 
 export default new PostController();
