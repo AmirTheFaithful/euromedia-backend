@@ -5,10 +5,12 @@ import { asyncHandler } from "../utils/asyncHandler";
 import {
   FetchPostUseCase,
   CreatePostUseCase,
+  UpdatePostUseCase,
+  DeletePostUseCase,
 } from "../use-cases/post.use-case";
 import { ResponseBody } from "../types/api.type";
 import { MediaEntityQueries } from "../types/queries.type";
-import { CreatePostDTO, Post, Posts } from "../types/post.type";
+import { CreatePostDTO, UpdatePostDTO, Post, Posts } from "../types/post.type";
 import { cache } from "../config/lru";
 
 class PostController {
@@ -48,6 +50,20 @@ class PostController {
       const createPostUseCase = this.container.get(CreatePostUseCase);
       const newPost: Post = await createPostUseCase.execute(req.body);
       res.status(201).json({ data: newPost, message: "Post success." });
+    }
+  );
+
+  public updatePost = asyncHandler(
+    async (
+      req: Request<any, Post, UpdatePostDTO, { id?: string }>,
+      res: Response<ResponseBody<Post>>
+    ) => {
+      const updatePostUseCase = this.container.get(UpdatePostUseCase);
+      const updatedPost: Post = await updatePostUseCase.execute(
+        req.query,
+        req.body
+      );
+      res.status(200).json({ data: updatedPost, message: "Update Success." });
     }
   );
 }
