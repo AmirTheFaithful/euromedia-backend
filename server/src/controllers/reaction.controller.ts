@@ -60,7 +60,7 @@ class ReactionController {
     res.setHeader("X-Cache-Status", isCached ? "HIT" : "MISS");
 
     // Cache the single reaction result if not already cached.
-    if (cachedKey && data && !isCached && !Array.isArray(data)) {
+    if (cachedKey && data && !isCached) {
       // Store into the cache.
       cache.set(cachedKey, data);
     }
