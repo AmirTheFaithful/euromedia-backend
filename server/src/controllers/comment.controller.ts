@@ -6,11 +6,13 @@ import { asyncHandler } from "../utils/asyncHandler";
 import {
   FetchCommentsUseCase,
   CreateCommentUseCase,
+  UpdateCommentUseCase,
 } from "../use-cases/comment.use-case";
 import { SubentityQueries } from "../types/queries.type";
 import { ResponseBody } from "../types/api.type";
 import {
   CreateCommentDTOInput,
+  UpdateCommentDTO,
   Comment,
   Comments,
 } from "../types/comment.type";
@@ -56,6 +58,25 @@ class CommentController {
       const createCommentUseCase = this.container.get(CreateCommentUseCase);
       const data: Comment = await createCommentUseCase.execute(req.body);
       res.status(201).json({ data, message: "Post success." });
+    }
+  );
+
+  public updateComment = asyncHandler(
+    async (
+      req: Request<
+        any,
+        ResponseBody<Comment>,
+        UpdateCommentDTO,
+        SubentityQueries
+      >,
+      res: Response<ResponseBody<Comment>>
+    ) => {
+      const updateCommentUseCase = this.container.get(UpdateCommentUseCase);
+      const data: Comment = await updateCommentUseCase.execute(
+        req.query,
+        req.body
+      );
+      res.status(200).json({ data, message: "Update success." });
     }
   );
 }
