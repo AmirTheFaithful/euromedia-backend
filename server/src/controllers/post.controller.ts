@@ -2,10 +2,13 @@ import { Request, Response } from "express";
 
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
-import { FetchPostUseCase } from "../use-cases/post.use-case";
+import {
+  FetchPostUseCase,
+  CreatePostUseCase,
+} from "../use-cases/post.use-case";
 import { ResponseBody } from "../types/api.type";
 import { MediaEntityQueries } from "../types/queries.type";
-import { Post, Posts } from "../types/post.type";
+import { CreatePostDTO, Post, Posts } from "../types/post.type";
 import { cache } from "../config/lru";
 
 class PostController {
@@ -17,7 +20,7 @@ class PostController {
       res: Response<ResponseBody<Post | Posts>>
     ) => {
       const fetchPostUseCase = this.container.get(FetchPostUseCase);
-      const data: Post | Posts = await fetchPostUseCase.execute(req.body);
+      const data: Post | Posts = await fetchPostUseCase.execute(req.query);
 
       const cachedKey: string | undefined = req.query.id ?? req.query.authorId;
       const isCached = cachedKey && cache.has(cachedKey);
@@ -34,6 +37,17 @@ class PostController {
       }`;
 
       res.status(200).json({ data, message: responseMessage }).end();
+    }
+  );
+
+  public createPost = asyncHandler(
+    async (
+      req: Request<any, Post, CreatePostDTO>,
+      res: Response<ResponseBody<Post>>
+    ) => {
+      const createPostUseCase = this.container.get(CreatePostUseCase);
+      const newPost: Post = await createPostUseCase.execute(req.body);
+      res.status(201).json({ data: newPost, message: "Post success." });
     }
   );
 }
