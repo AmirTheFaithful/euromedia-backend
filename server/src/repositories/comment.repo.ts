@@ -90,7 +90,8 @@ export default class CommentRepo {
   ): Promise<Comment | null> {
     return await this.model.instance.findOneAndUpdate(
       { targetId, authorId },
-      data
+      data,
+      { new: true }
     );
   }
 
