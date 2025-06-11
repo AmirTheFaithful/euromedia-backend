@@ -1,12 +1,13 @@
 import { injectable, inject } from "inversify";
+import { z } from "zod";
 
 import UserService from "../services/user.service";
 import { BadRequestError, NotFoundError } from "../errors/http-errors";
-import { User, Users } from "../types/user.type";
-import { UpdateUserRequestBody } from "../types/api.type";
+import { User, Users, UpdateUserDTO } from "../types/user.type";
 import { UserQueries } from "../types/queries.type";
 import { APIUseCase } from "./APIUseCase";
 import { cache } from "../config/lru";
+import { UpdateUserRequestBody } from "../types/api.type";
 
 abstract class UserUseCase extends APIUseCase {
   protected validateEmail(email: string): never | string {
@@ -75,22 +76,63 @@ export class FetchUserUseCase extends UserUseCase {
 
 @injectable()
 export class UpdateUserUseCase extends UserUseCase {
+  private readonly updateSchema = z
+    .object({
+      firstname: z.string().optional(),
+      lastname: z.string().optional(),
+      password: z.string().optional(),
+      city: z.string().optional(),
+      country: z.string().optional(),
+    })
+    .strict();
+
+  private mapToUpdateStructure(flat: UpdateUserDTO): UpdateUserRequestBody {
+    const result: UpdateUserRequestBody = {};
+
+    if (flat.firstname || flat.lastname) {
+      result.meta = {
+        firstname: flat.firstname,
+        lastname: flat.lastname,
+      };
+    }
+
+    if (flat.password) {
+      result.auth = {
+        password: flat.password,
+      };
+    }
+
+    if (flat.city || flat.country) {
+      result.location = {
+        city: flat.city,
+        country: flat.country,
+      };
+    }
+
+    return result;
+  }
+
   constructor(@inject(UserService) private readonly service: UserService) {
     super();
   }
 
-  public async execute(queries: UserQueries, body: UpdateUserRequestBody) {
+  public async execute(queries: UserQueries, body: UpdateUserDTO) {
     const { id, email }: UserQueries = queries;
-    const { data }: UpdateUserRequestBody = body;
+    const flatUpdateData: UpdateUserDTO = this.updateSchema.parse(body);
+    const updateData: UpdateUserRequestBody =
+      this.mapToUpdateStructure(flatUpdateData);
 
     let updatedUser: User | null = null;
 
     if (id) {
       const validId = this.validateObjectId(id);
-      updatedUser = await this.service.updateUserById(validId, data);
+      updatedUser = await this.service.updateUserById(validId, updateData);
     } else if (email) {
       const validEmail = this.validateEmail(email);
-      updatedUser = await this.service.updateUserByEmail(validEmail, data);
+      updatedUser = await this.service.updateUserByEmail(
+        validEmail,
+        updateData
+      );
     } else {
       throw new BadRequestError("No query is provided.");
     }

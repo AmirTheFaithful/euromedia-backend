@@ -1,4 +1,5 @@
 import { injectable, inject } from "inversify";
+import { z } from "zod";
 
 import CommentService from "../services/comment.service";
 import {
@@ -200,6 +201,25 @@ export class CreateCommentUseCase extends SubEntityUseCase {
  */
 @injectable()
 export class UpdateCommentUseCase extends SubEntityUseCase {
+  private readonly CommentBlockType = z.union([
+    z.literal("text"),
+    z.literal("blockquote"),
+    z.literal("imageURL"),
+  ]);
+
+  private readonly CommentBlockSchema = z
+    .object({
+      type: this.CommentBlockType,
+      content: z.string(),
+    })
+    .strict();
+
+  private readonly UpdateSchema = z
+    .object({
+      content: this.CommentBlockSchema,
+    })
+    .strict();
+
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -210,8 +230,8 @@ export class UpdateCommentUseCase extends SubEntityUseCase {
     queries: SubentityQueries,
     dto: UpdateCommentDTO
   ): Promise<Comment> {
-    const validData = this.validateDTO(dto);
-    const updatedComment = await this.handleQueryStrategy(queries, validData);
+    const data = this.UpdateSchema.parse(dto);
+    const updatedComment = await this.handleQueryStrategy(queries, data);
     this.assertObjectIsFound(updatedComment);
     await updatedComment.save();
     return updatedComment;
@@ -254,25 +274,6 @@ export class UpdateCommentUseCase extends SubEntityUseCase {
         data
       );
     return updatedComment;
-  }
-
-  /**
-   * Validates the update data transfer object (DTO).
-   *
-   * Ensures required fields are present; throws an error if validation fails.
-   *
-   * @param {UpdateCommentDTO} dto - The update DTO to validate.
-   * @returns {UpdateCommentDTO} The validated DTO.
-   * @throws {BadRequestError} If the `content` field is missing.
-   */
-  private validateDTO(dto: UpdateCommentDTO): UpdateCommentDTO {
-    const { content } = dto;
-
-    if (!content) {
-      throw new BadRequestError();
-    }
-
-    return { content };
   }
 
   /**
