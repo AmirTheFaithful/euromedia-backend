@@ -1,8 +1,6 @@
 import { Document } from "mongoose";
 import { ObjectId } from "mongodb";
 
-import { Replace } from "../types/utils.type";
-
 /**
  * Represents a block of content within a comment.
  *
@@ -66,7 +64,8 @@ export type CreateCommentDTO = {
  */
 export type UpdateCommentDTO = Pick<Comment, "content">;
 
-export type CreateCommentDTOInput = Replace<
-  Comment,
-  { targetId: string; authorId: string }
->;
+export interface CreateCommentDTOInput {
+  targetId: string;
+  authorId: string;
+  content: CommentBlock;
+}
