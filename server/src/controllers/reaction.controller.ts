@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { FetchReactionUseCase } from "../use-cases/reaction.use-case";
 import { cache } from "../config/lru";
 import { Reaction, Reactions } from "../types/reaction.type";
+import { ResponseBody } from "../types/api.type";
 import { SubentityQueries } from "../types/queries.type";
 import { BadRequestError } from "../errors/http-errors";
 
@@ -46,31 +47,37 @@ class ReactionController {
     throw new BadRequestError("Invalid query string parameters.");
   }
 
-  public getReactions = asyncHandler(async (req: Request, res: Response) => {
-    // Resolve the use case from the DI container.
-    const fetchReactionUseCase = this.container.get(FetchReactionUseCase);
-    const data: Reaction | Reactions | null =
-      await fetchReactionUseCase.execute(req.query);
+  public getReactions = asyncHandler(
+    async (
+      req: Request<unknown, unknown, unknown, SubentityQueries>,
+      res: Response<ResponseBody<Reaction | Reactions>>
+    ) => {
+      // Resolve the use case from the DI container.
+      const fetchReactionUseCase = this.container.get(FetchReactionUseCase);
+      const data: Reaction | Reactions = await fetchReactionUseCase.execute(
+        req.query
+      );
 
-    // Get special key value for retrieving cached value, based on query type.
-    const cachedKey: string = this.getCachedKey(req.query);
+      // Get special key value for retrieving cached value, based on query type.
+      const cachedKey: string = this.getCachedKey(req.query);
 
-    // Decide if the value has been cached earlier, then based on cache status send a special header.
-    const isCached: boolean = cache.has(cachedKey);
-    res.setHeader("X-Cache-Status", isCached ? "HIT" : "MISS");
+      // Decide if the value has been cached earlier, then based on cache status send a special header.
+      const isCached: boolean = cache.has(cachedKey);
+      res.setHeader("X-Cache-Status", isCached ? "HIT" : "MISS");
 
-    // Cache the single reaction result if not already cached.
-    if (cachedKey && data && !isCached) {
-      // Store into the cache.
-      cache.set(cachedKey, data);
+      // Cache the single reaction result if not already cached.
+      if (cachedKey && data && !isCached) {
+        // Store into the cache.
+        cache.set(cachedKey, data);
+      }
+
+      // Form a message for client-side based on the cache status and finally send it as a response.
+      const responseMessage: string = isCached
+        ? "Fetch success (cached)."
+        : "Fetch success.";
+      res.status(200).json({ data, message: responseMessage });
     }
-
-    // Form a message for client-side based on the cache status and finally send it as a response.
-    const responseMessage: string = isCached
-      ? "Fetch success (cached)."
-      : "Fetch success.";
-    res.status(200).json({ data, message: responseMessage });
-  });
+  );
 }
 
 export default new ReactionController();
