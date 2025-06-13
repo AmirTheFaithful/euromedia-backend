@@ -83,7 +83,7 @@ export default class ReactionRepository {
     id: ObjectId,
     data: UpdateReactionDTO
   ): Promise<Reaction | null> {
-    return this.model.instance.findByIdAndUpdate(id, data);
+    return this.model.instance.findByIdAndUpdate(id, data, { new: true });
   }
 
   /**
@@ -99,7 +99,9 @@ export default class ReactionRepository {
     authorId: ObjectId,
     data: UpdateReactionDTO
   ): Promise<Reaction | null> {
-    return this.model.instance.findOneAndUpdate({ targetId, authorId }, data);
+    return this.model.instance.findOneAndUpdate({ targetId, authorId }, data, {
+      new: true,
+    });
   }
 
   /**
