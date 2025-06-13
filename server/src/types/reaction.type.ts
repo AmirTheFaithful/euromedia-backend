@@ -38,9 +38,9 @@ export type AttractiveReactions = "love" | "happy" | "amazed" | "scared";
 /**
  * Reactions representing sadness, boredom, or emotional vulnerability.
  *
- * @typedef {"bored" | "sad" | "cry" | "zithannya"} SadReactions
+ * @typedef {"bored" | "sad" | "cry" | "sigh"} SadReactions
  */
-export type SadReactions = "bored" | "sad" | "cry" | "zithannya";
+export type SadReactions = "bored" | "sad" | "cry" | "sigh";
 
 /**
  * Negative reactions expressing dissatisfaction or disapproval.
