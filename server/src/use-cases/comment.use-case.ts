@@ -13,6 +13,21 @@ import { SubEntityUseCase } from "./APIUseCase";
 import { SubentityQueries } from "../types/queries.type";
 import { BadRequestError } from "../errors/http-errors";
 
+abstract class SaveCommentUseCase extends SubEntityUseCase {
+  protected readonly CommentBlockType = z.union([
+    z.literal("text"),
+    z.literal("blockquote"),
+    z.literal("imageURL"),
+  ]);
+
+  protected readonly CommentBlockSchema = z
+    .object({
+      type: this.CommentBlockType,
+      content: z.string(),
+    })
+    .strict();
+}
+
 /**
  * Use case class responsible for retrieving comments.
  *
@@ -130,7 +145,14 @@ export class FetchCommentsUseCase extends SubEntityUseCase {
  * @extends SubEntityUseCase
  */
 @injectable()
-export class CreateCommentUseCase extends SubEntityUseCase {
+export class CreateCommentUseCase extends SaveCommentUseCase {
+  private readonly CreateCommentSchema = z
+    .object({
+      targetId: z.string().min(24),
+      authorId: z.string().min(24),
+      content: this.CommentBlockSchema,
+    })
+    .strict();
   constructor(
     @inject(CommentService) private readonly service: CommentService
   ) {
@@ -138,7 +160,8 @@ export class CreateCommentUseCase extends SubEntityUseCase {
   }
 
   public async execute(input: CreateCommentDTOInput): Promise<Comment> {
-    return this.performCreation(input);
+    const data: CreateCommentDTOInput = this.CreateCommentSchema.parse(input);
+    return this.performCreation(data);
   }
 
   /**
@@ -148,23 +171,9 @@ export class CreateCommentUseCase extends SubEntityUseCase {
    * @private
    * @param {CreateCommentDTOInput} dto - The raw input data for creating a comment.
    * @returns {CreateCommentDTO} A validated and normalized DTO with converted ObjectId values.
-   * @throws {BadRequestError} If required fields are missing or contain invalid values.
    */
   private validateDTO(dto: CreateCommentDTOInput): CreateCommentDTO {
     const { authorId, targetId, content } = dto;
-
-    // Check all required fields for presence.
-    if (
-      !authorId ||
-      !targetId ||
-      !content ||
-      !content.content ||
-      !content.type
-    ) {
-      throw new BadRequestError();
-    }
-
-    // Check targetId and authorId to be valid ObjectId's
     return {
       content,
       targetId: this.validateObjectId(targetId),
@@ -200,20 +209,7 @@ export class CreateCommentUseCase extends SubEntityUseCase {
  * @extends SubEntityUseCase
  */
 @injectable()
-export class UpdateCommentUseCase extends SubEntityUseCase {
-  private readonly CommentBlockType = z.union([
-    z.literal("text"),
-    z.literal("blockquote"),
-    z.literal("imageURL"),
-  ]);
-
-  private readonly CommentBlockSchema = z
-    .object({
-      type: this.CommentBlockType,
-      content: z.string(),
-    })
-    .strict();
-
+export class UpdateCommentUseCase extends SaveCommentUseCase {
   private readonly UpdateSchema = z
     .object({
       content: this.CommentBlockSchema,
