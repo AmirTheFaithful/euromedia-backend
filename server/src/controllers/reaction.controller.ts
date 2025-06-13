@@ -5,12 +5,14 @@ import { asyncHandler } from "../utils/asyncHandler";
 import {
   FetchReactionUseCase,
   CreateReactionUseCase,
+  UpdateReactionUseCase,
 } from "../use-cases/reaction.use-case";
 import { cache } from "../config/lru";
 import {
   Reaction,
   Reactions,
   CreateReactionInputDTO,
+  UpdateReactionDTO,
 } from "../types/reaction.type";
 import { ResponseBody } from "../types/api.type";
 import { SubentityQueries } from "../types/queries.type";
@@ -96,6 +98,19 @@ class ReactionController {
       );
       const data: Reaction = await useCase.execute(req.body);
       res.status(201).json({ data, message: "Post success." });
+    }
+  );
+
+  public updateReaction = asyncHandler(
+    async (
+      req: Request<unknown, unknown, UpdateReactionDTO, SubentityQueries>,
+      res: Response<ResponseBody<Reaction>>
+    ) => {
+      const useCase: UpdateReactionUseCase = this.container.get(
+        UpdateReactionUseCase
+      );
+      const data: Reaction = await useCase.execute(req.query, req.body);
+      res.status(200).json({ data, message: "Update success." });
     }
   );
 }
