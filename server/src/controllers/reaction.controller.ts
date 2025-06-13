@@ -6,6 +6,7 @@ import {
   FetchReactionUseCase,
   CreateReactionUseCase,
   UpdateReactionUseCase,
+  DeleteReactionUseCase,
 } from "../use-cases/reaction.use-case";
 import { cache } from "../config/lru";
 import {
@@ -111,6 +112,19 @@ class ReactionController {
       );
       const data: Reaction = await useCase.execute(req.query, req.body);
       res.status(200).json({ data, message: "Update success." });
+    }
+  );
+
+  public deleteReaction = asyncHandler(
+    async (
+      req: Request<unknown, unknown, unknown, SubentityQueries>,
+      res: Response<ResponseBody<Reaction>>
+    ) => {
+      const useCase: DeleteReactionUseCase = this.container.get(
+        DeleteReactionUseCase
+      );
+      const data: Reaction = await useCase.execute(req.query);
+      res.status(200).json({ data, message: "Deletion success." });
     }
   );
 }
