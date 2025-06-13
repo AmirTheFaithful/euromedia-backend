@@ -1,5 +1,6 @@
 import { injectable, inject } from "inversify";
 import { ObjectId } from "mongodb";
+import { z } from "zod";
 
 import ReactionService from "../services/reaction.service";
 import { BadRequestError } from "../errors/http-errors";
@@ -11,6 +12,27 @@ import {
 } from "../types/reaction.type";
 import { SubEntityUseCase } from "./APIUseCase";
 import { SubentityQueries } from "../types/queries.type";
+
+abstract class SaveReactionUseCase extends SubEntityUseCase {
+  protected readonly ReactionTypeSchema = z.union([
+    z.literal("like"),
+    z.literal("smile"),
+    z.literal("fun"),
+    z.literal("laugh"),
+    z.literal("love"),
+    z.literal("happy"),
+    z.literal("amazed"),
+    z.literal("scared"),
+    z.literal("bored"),
+    z.literal("sad"),
+    z.literal("cry"),
+    z.literal("sigh"),
+    z.literal("dislike"),
+    z.literal("angry"),
+    z.literal("hate"),
+    z.literal("shame"),
+  ]);
+}
 
 /**
  * Use case for retrieving a single reaction or a group of reactions
@@ -114,7 +136,15 @@ export class FetchReactionUseCase extends SubEntityUseCase {
  * @extends SubEntityUseCase
  */
 @injectable()
-export class CreateReactionUseCase extends SubEntityUseCase {
+export class CreateReactionUseCase extends SaveReactionUseCase {
+  private readonly CreateReactionSchema = z
+    .object({
+      targetId: z.string().min(24),
+      authorId: z.string().min(24),
+      type: this.ReactionTypeSchema,
+    })
+    .strict();
+
   constructor(
     @inject(ReactionService) private readonly service: ReactionService
   ) {
@@ -122,7 +152,7 @@ export class CreateReactionUseCase extends SubEntityUseCase {
   }
 
   public async execute(input: CreateReactionInputDTO): Promise<Reaction> {
-    const validData = this.validateDTO(input);
+    const validData = this.validateDTO(this.CreateReactionSchema.parse(input));
     return this.createReaction(validData);
   }
 
@@ -172,7 +202,13 @@ export class CreateReactionUseCase extends SubEntityUseCase {
  * @extends SubEntityUseCase
  */
 @injectable()
-export class UpdateReactionUseCase extends SubEntityUseCase {
+export class UpdateReactionUseCase extends SaveReactionUseCase {
+  private readonly UpdateReactionSchema = z
+    .object({
+      type: this.ReactionTypeSchema,
+    })
+    .strict();
+
   constructor(
     @inject(ReactionService) private readonly service: ReactionService
   ) {
@@ -183,8 +219,8 @@ export class UpdateReactionUseCase extends SubEntityUseCase {
     queries: SubentityQueries,
     data: UpdateReactionDTO
   ): Promise<Reaction> {
-    this.assertDataIsValid(data);
-    return await this.updateReaction(queries, data);
+    const updateData = this.UpdateReactionSchema.parse(data);
+    return await this.updateReaction(queries, updateData);
   }
 
   /**
