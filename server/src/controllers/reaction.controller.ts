@@ -2,9 +2,16 @@ import { Request, Response } from "express";
 
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
-import { FetchReactionUseCase } from "../use-cases/reaction.use-case";
+import {
+  FetchReactionUseCase,
+  CreateReactionUseCase,
+} from "../use-cases/reaction.use-case";
 import { cache } from "../config/lru";
-import { Reaction, Reactions } from "../types/reaction.type";
+import {
+  Reaction,
+  Reactions,
+  CreateReactionInputDTO,
+} from "../types/reaction.type";
 import { ResponseBody } from "../types/api.type";
 import { SubentityQueries } from "../types/queries.type";
 import { BadRequestError } from "../errors/http-errors";
@@ -76,6 +83,19 @@ class ReactionController {
         ? "Fetch success (cached)."
         : "Fetch success.";
       res.status(200).json({ data, message: responseMessage });
+    }
+  );
+
+  public createReaction = asyncHandler(
+    async (
+      req: Request<any, ResponseBody<Reaction>, CreateReactionInputDTO>,
+      res: Response<ResponseBody<Reaction>>
+    ) => {
+      const useCase: CreateReactionUseCase = this.container.get(
+        CreateReactionUseCase
+      );
+      const data: Reaction = await useCase.execute(req.body);
+      res.status(201).json({ data, message: "Post success." });
     }
   );
 }
