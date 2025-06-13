@@ -8,4 +8,5 @@ export const reactionRoutes = (router: Router): void => {
   router.get(baseURL, reactionController.getReactions);
   router.post(baseURL, reactionController.createReaction);
   router.patch(baseURL, reactionController.updateReaction);
+  router.delete(baseURL, reactionController.deleteReaction);
 };
