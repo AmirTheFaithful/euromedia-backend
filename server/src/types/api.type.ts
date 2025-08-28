@@ -1,5 +1,3 @@
-import { UpdateUserDTO } from "../types/user.type";
-
 /**
  * Represents a standardized structure for API responses.
  *
@@ -14,11 +12,28 @@ export type ResponseBody<DataType> = {
 
 /**
  * Request body for updating a user.
- * To be used only on controllers or higher API levels of the backend.
+ * Contains optional nested groups for personal info, authentication, and location.
  *
  * @typedef {Object} UpdateUserRequestBody
- * @property {UpdateUserDTO} data - Data used to update the user.
+ * @property {Object} [meta] - User personal metadata.
+ * @property {string} [meta.firstname] - User's first name.
+ * @property {string} [meta.lastname] - User's last name.
+ * @property {Object} [auth] - User authentication data.
+ * @property {string} [auth.password] - User's password.
+ * @property {Object} [location] - User location data.
+ * @property {string} [location.city] - City of the user.
+ * @property {string} [location.country] - Country of the user.
  */
 export interface UpdateUserRequestBody {
-  data: UpdateUserDTO;
+  meta?: {
+    firstname?: string;
+    lastname?: string;
+  };
+  auth?: {
+    password?: string;
+  };
+  location?: {
+    city?: string;
+    country?: string;
+  };
 }
