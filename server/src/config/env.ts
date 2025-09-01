@@ -2,6 +2,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+export const app = {
+  name: process.env.APP_NAME!,
+};
+
 export const sys = {
   servPort: process.env.SERVER_PORT!,
   clntPort: process.env.CLIENT_PORT!,
