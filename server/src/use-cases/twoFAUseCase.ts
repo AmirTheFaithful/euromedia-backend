@@ -18,18 +18,18 @@ import { User } from "../types/user.type";
 /**
  * @interface SetupInputData
  *
- * Input data for MFA setup use case.
+ * Input data for 2FA setup use case.
  *
- * @property {string} pandingMFAToken Pending MFA JWT token issued to the user for verification before setup.
+ * @property {string} panding2FAToken Pending 2FA JWT token issued to the user for verification before setup.
  */
 interface SetupInputData {
-  pendingMFAToken: string;
+  pending2FAToken: string;
 }
 
 /**
  * @interface SetupOutputData
  *
- * Output data returned after MFA setup initialization.
+ * Output data returned after 2FA setup initialization.
  *
  * @property {string} OTP Auth URL (otpauth://) that can be rendered as a QR code on the client.
  */
@@ -38,40 +38,40 @@ interface SetupOutputData {
 }
 
 /**
- * Use case responsible for setting up Multi-Factor Authentication (MFA)
+ * Use case responsible for setting up Multi-Factor Authentication (2FA)
  * using TOTP secrets and OTP Auth URLs.
  *
  * The flow includes:
  * 1. Validating the input data via Zod schema.
- * 2. Verifying the pending MFA token.
+ * 2. Verifying the pending 2FA token.
  * 3. Generating and securely storing a hashed TOTP secret for the user.
  * 4. Returning an `otpauth://` URL that can be rendered as a QR code on the client.
  *
  * @remarks
  * - This class relies on `UserService` to fetch and update user entities.
- * - The `schema` ensures `pendingMFAToken` is a non-empty string.
+ * - The `schema` ensures `pending2FAToken` is a non-empty string.
  * - All private methods follow single responsibility and are easily unit-testable.
  *
  * @example
  * ```ts
- * const useCase = new SetupMFAUseCase(userService);
- * const result = await useCase.execute({ pendingMFAToken: token });
+ * const useCase = new Setup2FAUseCase(userService);
+ * const result = await useCase.execute({ pending2FAToken: token });
  * console.log(result.otpAuthURL); // otpauth://totp/...
  * ```
  */
-export class SetupMFAUseCase extends AuthUseCase {
+export class Setup2FAUseCase extends AuthUseCase {
   /**
    * Zod schema for validating the input data to `execute()`.
    *
    * @private
    */
   private readonly schema = z.object({
-    /** Pending MFA JWT token issued to the user for verification. */
-    pendingMFAToken: z.string(),
+    /** Pending 2FA JWT token issued to the user for verification. */
+    pending2FAToken: z.string(),
   });
 
   /**
-   * Creates a new instance of SetupMFAUseCase.
+   * Creates a new instance of Setup2FAUseCase.
    *
    * @param {UserService} service - The user service used for user retrieval and persistence.
    */
@@ -80,19 +80,19 @@ export class SetupMFAUseCase extends AuthUseCase {
   }
 
   /**
-   * Executes the MFA setup flow:
+   * Executes the 2FA setup flow:
    * 1. Validates input data.
-   * 2. Retrieves verified user object by providing pending MFA token.
-   * 3. Generates and stores into DB a hashed MFA secret.
+   * 2. Retrieves verified user object by providing pending 2FA token.
+   * 3. Generates and stores into DB a hashed 2FA secret.
    * 4. Returns an OTP Auth URL.
    *
-   * @param {SetupInputData} data - Input containing the pending MFA JWT token.
+   * @param {SetupInputData} data - Input containing the pending 2FA JWT token.
    * @returns {Promise<SetupOutputData>} Object with the OTP Auth URL.
    * @throws {BadRequestError} If token verification fails or user does not exist.
    */
   public async execute(data: SetupInputData): Promise<SetupOutputData> {
     const parsed: SetupInputData = this.schema.parse(data);
-    const user: User = await this.getVerifiedUser(parsed.pendingMFAToken);
+    const user: User = await this.getVerifiedUser(parsed.pending2FAToken);
     const base32Secret: string = this.createAndStoreSecret(user);
     const otpAuthURL: string = this.generateOTPAuthURL(
       base32Secret,
@@ -103,15 +103,15 @@ export class SetupMFAUseCase extends AuthUseCase {
   }
 
   /**
-   * Verifies a pending MFA token and retrieves the corresponding user.
+   * Verifies a pending 2FA token and retrieves the corresponding user.
    *
    * @private
-   * @param {string} pendingMFAToken - JWT token issued for MFA setup.
+   * @param {string} pending2FAToken - JWT token issued for 2FA setup.
    * @returns {Promise<User>} - The verified user entity.
    * @throws {BadRequestError} If the token is invalid or the user does not exist.
    */
-  private async getVerifiedUser(pendingMFAToken: string): Promise<User> {
-    const userId: string = this.decodeUserId(pendingMFAToken);
+  private async getVerifiedUser(pending2FAToken: string): Promise<User> {
+    const userId: string = this.decodeUserId(pending2FAToken);
     const user: User = await this.checkExistance(userId, "id", "absence");
     return user;
   }
@@ -121,7 +121,7 @@ export class SetupMFAUseCase extends AuthUseCase {
    * then returns the plain Base32-encoded secret.
    *
    * @private
-   * @param {User} user - The user entity for whom to create the MFA secret.
+   * @param {User} user - The user entity for whom to create the 2FA secret.
    * @returns {string} - The plain Base32-encoded secret.
    */
   private createAndStoreSecret(user: User): string {
@@ -144,9 +144,9 @@ export class SetupMFAUseCase extends AuthUseCase {
   }
 
   /**
-   * Decodes and validates a user ID from the pending MFA token.
+   * Decodes and validates a user ID from the pending 2FA token.
    *
-   * @param {string} token - The pending MFA JWT token.
+   * @param {string} token - The pending 2FA JWT token.
    * @returns {string} Extracted user ID.
    * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
    */
@@ -191,7 +191,7 @@ export class SetupMFAUseCase extends AuthUseCase {
   }
 
   /**
-   * Stores a hashed version of the user's MFA secret.
+   * Stores a hashed version of the user's 2FA secret.
    *
    * @param {User} user - User entity to update.
    * @param {string} base32Secret - The plain Base32-encoded secret before hashing.
