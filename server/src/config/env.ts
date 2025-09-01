@@ -22,6 +22,13 @@ export const eml = {
   pas: process.env.EMAIL_PASSWORD!,
 };
 
+export const twoFA = {
+  mst_key: process.env.TWO_FA_MASTER_KEY!,
+  key_ecd: process.env.TWO_FA_KEY_ENCODING!,
+  hsh_alg: process.env.TWO_FA_HASHING_ALGORITHM!,
+  hsh_dig: process.env.TWO_FA_HASHING_DIGEST!,
+};
+
 export const jwt = {
   acs: process.env.JWT_ACCESS_SECRET!,
   rfs: process.env.JWT_REFRESH_SECRET!,
