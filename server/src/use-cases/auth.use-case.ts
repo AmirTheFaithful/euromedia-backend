@@ -28,11 +28,22 @@ export class AuthUseCase {
 
   constructor(@inject(UserService) protected readonly service: UserService) {}
 
-  protected async checkExistence(
-    email: string,
+  protected async checkExistance(
+    key: string,
+    keyType: "id" | "email",
     issue: "conflict" | "absence"
-  ): Promise<never | User> {
-    const existingUser = await this.service.getUserByEmail(email);
+  ): Promise<User> {
+    let existingUser: User | null;
+
+    if (keyType === "id") {
+      if (ObjectId.isValid(key)) {
+        existingUser = await this.service.getUserById(new ObjectId(key));
+      } else {
+        throw new BadRequestError("Invalid id value.");
+      }
+    } else {
+      existingUser = await this.service.getUserByEmail(key);
+    }
 
     if (issue === "conflict") {
       if (existingUser) {
@@ -77,7 +88,7 @@ export class RegisterUseCase extends AuthUseCase {
     const { email } = parsed;
 
     // Check if provided email is already registered.
-    await this.checkExistence(email, "conflict");
+    await this.checkExistance(email, "email", "conflict");
 
     // Create a new user account into DB:
     const newUserID = await this.createInstance(parsed);
@@ -219,7 +230,7 @@ export class ResetPasswordRequestUseCase extends AuthUseCase {
     const { email } = this.schema.parse(input);
 
     // If the user exists, assign to global user object and continue, throw "not found" error otherwise.
-    this.user = await this.checkExistence(email, "absence");
+    this.user = await this.checkExistance(email, "email", "absence");
 
     // Generate token to be verified on password reset.
     const token: string = sign({ id: this.user._id }, jwt.eml, {
@@ -261,7 +272,11 @@ export class ResetPasswordUseCase extends AuthUseCase {
 
   public async execute(input: LoginRequestBody, headers: IncomingHttpHeaders) {
     const { email, password } = this.loginSchema.parse(input);
-    const emailUser: User = await this.checkExistence(email, "absence");
+    const emailUser: User = await this.checkExistance(
+      email,
+      "email",
+      "absence"
+    );
 
     if (!emailUser) {
       throw new NotFoundError(`User not found with email '${email}'.`);
@@ -297,7 +312,7 @@ export class LoginUseCase extends AuthUseCase {
   public async execute(input: LoginRequestBody) {
     const { email, password } = this.loginSchema.parse(input);
 
-    this.user = await this.checkExistence(email, "absence");
+    this.user = await this.checkExistance(email, "email", "absence");
 
     await this.comparePasswords(password, this.user.auth.password);
 
