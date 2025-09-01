@@ -25,5 +25,6 @@ export const eml = {
 export const jwt = {
   acs: process.env.JWT_ACCESS_SECRET!,
   rfs: process.env.JWT_REFRESH_SECRET!,
+  p2a: process.env.JWT_PENDING_2FA_SECRET!,
   eml: process.env.JWT_EMAIL_SECRET!,
 };
