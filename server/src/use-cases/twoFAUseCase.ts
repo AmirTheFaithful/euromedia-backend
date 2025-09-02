@@ -23,7 +23,7 @@ import { User } from "../types/user.type";
  * @property {string} panding2FAToken Pending 2FA JWT token issued to the user for verification before setup.
  */
 interface SetupInputData {
-  pending2FAToken: string;
+  authHeader: string | undefined;
 }
 
 /**
@@ -67,7 +67,7 @@ export class Setup2FAUseCase extends AuthUseCase {
    */
   private readonly schema = z.object({
     /** Pending 2FA JWT token issued to the user for verification. */
-    pending2FAToken: z.string(),
+    authHeader: z.string(),
   });
 
   /**
@@ -92,7 +92,8 @@ export class Setup2FAUseCase extends AuthUseCase {
    */
   public async execute(data: SetupInputData): Promise<SetupOutputData> {
     const parsed: SetupInputData = this.schema.parse(data);
-    const user: User = await this.getVerifiedUser(parsed.pending2FAToken);
+    const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
+    const user: User = await this.getVerifiedUser(pending2FAToken);
     const base32Secret: string = this.createAndStoreSecret(user);
     const otpAuthURL: string = this.generateOTPAuthURL(
       base32Secret,
@@ -100,6 +101,29 @@ export class Setup2FAUseCase extends AuthUseCase {
     );
 
     return { otpAuthURL };
+  }
+
+  /**
+   * Extracts and validates a bearer token from the given authorization header.
+   *
+   * @private
+   * @param {string | undefined} header - The raw `Authorization` header value (e.g. `"Bearer <token>"`).
+   * @returns {string} The extracted token if the header is valid.
+   *
+   * @throws {BadRequestError} If the header is missing, not a string, does not use the `Bearer` scheme, or
+   *                           does not contain a token.
+   */
+  private readAuthHeader(header: string | undefined): string {
+    if (!header || typeof header !== "string") {
+      throw new BadRequestError("Invalid header.");
+    }
+
+    const [scheme, token] = header.split(" ");
+    if (scheme !== "Bearer" || !token) {
+      throw new BadRequestError("Invalid header scheme or missing token.");
+    }
+
+    return token;
   }
 
   /**
