@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { inject } from "inversify";
-import {
-  generateSecret,
-  otpauthURL,
-  GeneratedSecret,
-  Encoding,
-} from "speakeasy";
+import speakeasy, { GeneratedSecret, Encoding } from "speakeasy";
 import { createHmac, BinaryToTextEncoding } from "crypto";
 
 import { AuthUseCase } from "./auth.use-case";
@@ -196,7 +191,7 @@ export class Setup2FAUseCase extends AuthUseCase {
    * @returns {GeneratedSecret} Speakeasy `GeneratedSecret` object.
    */
   private generate2FASecret(username: string): GeneratedSecret {
-    return generateSecret({
+    return speakeasy.generateSecret({
       name: `${app.name} - (${username})`,
       issuer: app.name,
     });
@@ -235,7 +230,7 @@ export class Setup2FAUseCase extends AuthUseCase {
    * @returns {string} The otpauth:// URL.
    */
   private generateOTPAuthURL(secret: string, username: string): string {
-    return otpauthURL({
+    return speakeasy.otpauthURL({
       secret,
       encoding: twoFA.key_ecd as Encoding,
       label: `${app.name} - ${username}`,
