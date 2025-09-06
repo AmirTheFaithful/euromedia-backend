@@ -58,16 +58,16 @@ export interface UserAuth {
  * User Two-Factor Authentication (2FA) settings.
  *
  * @interface User2FA
- * @property {boolean} [is2FASetUp] - Indicates if 2FA is completed.
+ * @property {boolean} is2FASetUp - Indicates if 2FA is completed.
  * @property {string} twoFASecret - Hashed TOTP secret.
- * @property {{ type: Date }} [last2FAVerifiedAt] - Last successful 2FA verification timestamp.
- * @property {number} [failed2FAAttempts] - Consecutive failed 2FA attempts.
- * @property {string[]} [recoveryCodes] - Recovery codes for 2FA fallback.
+ * @property {Date} last2FAVerifiedAt - Last successful 2FA verification timestamp.
+ * @property {number} failed2FAAttempts - Consecutive failed 2FA attempts.
+ * @property {string[]} recoveryCodes - Recovery codes for 2FA fallback.
  */
 export interface User2FA {
   is2FASetUp?: boolean;
   twoFASecret: string;
-  last2FAVerifiedAt?: { type: Date };
+  last2FAVerifiedAt?: Date;
   failed2FAAttempts?: number;
   recoveryCodes?: string[];
 }
