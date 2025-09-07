@@ -9,6 +9,7 @@ import { User } from "../types/user.type";
  * This schema separates user data into logical domains:
  * - `meta`: personal information, excluded from default queries for privacy.
  * - `auth`: authentication data, some fields hidden for security.
+ * - `twoFA`: data existent only if 2FA is set up.
  * - `location`: optional geographic metadata, hidden from default fetches.
  */
 const UserSchema = new Schema<User>({
@@ -31,8 +32,15 @@ const UserSchema = new Schema<User>({
     is2FASetUp: { type: Boolean, default: false, index: true },
     // Hashed TOTP secret (hidden from queries)
     twoFASecret: {
-      type: String,
-      select: false,
+      ciphertext: {
+        type: String,
+      },
+      iv: {
+        type: String,
+      },
+      tag: {
+        type: String,
+      },
     },
     // Timestamp of last successful 2FA verification
     last2FAVerifiedAt: { type: Date },
