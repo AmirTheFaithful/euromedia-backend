@@ -1,13 +1,20 @@
 import { z } from "zod";
 import { inject } from "inversify";
 import speakeasy, { GeneratedSecret, Encoding } from "speakeasy";
-import { createHmac, BinaryToTextEncoding } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  CipherGCM,
+  DecipherGCM,
+} from "crypto";
+import { ObjectId } from "mongodb";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
 import { JwtPayload, sign, verify } from "jsonwebtoken";
 import { app, twoFA, jwt } from "../config/env";
-import { BadRequestError } from "../errors/http-errors";
+import { BadRequestError, UnauthorizedError } from "../errors/http-errors";
 import { User } from "../types/user.type";
 
 /**
@@ -30,6 +37,12 @@ interface SetupInputData {
  */
 interface SetupOutputData {
   otpAuthURL: string;
+}
+
+interface EncryptionData {
+  ciphertext: string;
+  iv: string;
+  tag: string;
 }
 
 /**
@@ -89,36 +102,13 @@ export class Setup2FAUseCase extends AuthUseCase {
     const parsed: SetupInputData = this.schema.parse(data);
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
     const user: User = await this.getVerifiedUser(pending2FAToken);
-    const base32Secret: string = this.createAndStoreSecret(user);
+    const base32Secret: string = await this.createAndStoreSecret(user);
     const otpAuthURL: string = this.generateOTPAuthURL(
       base32Secret,
       this.formatUsername(user)
     );
 
     return { otpAuthURL };
-  }
-
-  /**
-   * Extracts and validates a bearer token from the given authorization header.
-   *
-   * @private
-   * @param {string | undefined} header - The raw `Authorization` header value (e.g. `"Bearer <token>"`).
-   * @returns {string} The extracted token if the header is valid.
-   *
-   * @throws {BadRequestError} If the header is missing, not a string, does not use the `Bearer` scheme, or
-   *                           does not contain a token.
-   */
-  private readAuthHeader(header: string | undefined): string {
-    if (!header || typeof header !== "string") {
-      throw new BadRequestError("Invalid header.");
-    }
-
-    const [scheme, token] = header.split(" ");
-    if (scheme !== "Bearer" || !token) {
-      throw new BadRequestError("Invalid header scheme or missing token.");
-    }
-
-    return token;
   }
 
   /**
@@ -143,11 +133,11 @@ export class Setup2FAUseCase extends AuthUseCase {
    * @param {User} user - The user entity for whom to create the 2FA secret.
    * @returns {string} - The plain Base32-encoded secret.
    */
-  private createAndStoreSecret(user: User): string {
+  private async createAndStoreSecret(user: User): Promise<string> {
     const base32Secret: string = this.generate2FASecret(
       this.formatUsername(user)
     ).base32;
-    this.storeSecret(user, base32Secret);
+    await this.storeSecret(user, base32Secret);
     return base32Secret;
   }
 
@@ -198,27 +188,49 @@ export class Setup2FAUseCase extends AuthUseCase {
   }
 
   /**
-   * Hashes a TOTP secret using HMAC with the configured algorithm and master key.
+   * Encrypts a plain 2FA secret using AES in GCM mode.
    *
-   * @param {string} secret - Base32-encoded secret to be hashed.
-   * @returns {string} The hashed secret string.
+   * @private
+   * @param {string} secret - The raw TOTP secret (e.g., Base32-decoded string) to encrypt.
+   * @returns {EncryptionData} An object containing:
+   * - `ciphertext`: The encrypted secret in the specified encoding.
+   * - `iv`: The initialization vector used for this encryption (randomly generated, 12 bytes).
+   * - `tag`: The GCM authentication tag to ensure ciphertext integrity.
+   *
+   * @remarks
+   * - AES-GCM provides both confidentiality (encryption) and integrity (auth tag).
+   * - The IV must be unique per encryption; it is generated randomly here and stored alongside the ciphertext.
+   * - The master key (`twoFA.mst_key`) must remain secret and secure (e.g., in environment variables or KMS).
    */
-  private hash2FASecret(secret: string): string {
-    return createHmac(twoFA.hsh_alg, twoFA.mst_key)
-      .update(secret)
-      .digest(twoFA.hsh_dig as BinaryToTextEncoding);
+  private encrypt2FASecret(secret: string): EncryptionData {
+    const encoding = twoFA.key_ecd as BufferEncoding;
+    // Generate 12-byte random sequence, to be used as initialization vector.
+    const iv = randomBytes(12);
+    // Initialize a AES cipher with GCM mode.
+    const cipher = createCipheriv(
+      twoFA.enc_alg,
+      Buffer.from(twoFA.mst_key, encoding),
+      iv
+    ) as CipherGCM;
+    // Encrypt the secret value.
+    let ciphertext: string = cipher.update(secret, "utf-8", encoding);
+    ciphertext += cipher.final(encoding);
+    // Ciphertext malformation or invalidity mark.
+    const tag: string = cipher.getAuthTag().toString(encoding);
+
+    return { ciphertext, iv: iv.toString(encoding), tag };
   }
 
   /**
-   * Stores a hashed version of the user's 2FA secret.
+   * Stores a encrypted version of the user's 2FA secret.
    *
    * @param {User} user - User entity to update.
    * @param {string} base32Secret - The plain Base32-encoded secret before hashing.
    * @returns {Promise<void>}
    */
   private async storeSecret(user: User, base32Secret: string): Promise<void> {
-    const hashedSecret: string = this.hash2FASecret(base32Secret);
-    user.twoFA.twoFASecret = hashedSecret;
+    const encryptedSecret = this.encrypt2FASecret(base32Secret);
+    user.twoFA.twoFASecret = encryptedSecret;
     await user.save();
   }
 
