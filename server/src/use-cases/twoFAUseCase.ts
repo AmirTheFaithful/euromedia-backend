@@ -12,7 +12,7 @@ import { ObjectId } from "mongodb";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
-import { JwtPayload, sign, verify } from "jsonwebtoken";
+import { JwtPayload, verify } from "jsonwebtoken";
 import { app, twoFA, jwt } from "../config/env";
 import { BadRequestError, UnauthorizedError } from "../errors/http-errors";
 import { User } from "../types/user.type";
@@ -39,6 +39,19 @@ interface SetupOutputData {
   otpAuthURL: string;
 }
 
+/**
+ * Represents the encrypted form of a sensitive value using AES-GCM.
+ *
+ * @interface EncryptionData
+ *
+ * @property {string} ciphertext - The AES-GCM encrypted text, encoded as a string.
+ * @property {string} iv - The initialization vector (IV) used for encryption, encoded as a string.
+ * @property {string} tag - The authentication tag from AES-GCM, used to verify integrity, encoded as a string.
+ *
+ * @remarks
+ * - All fields are required to correctly decrypt and validate the encrypted data.
+ * - This structure is intended for securely storing secrets such as 2FA keys.
+ */
 interface EncryptionData {
   ciphertext: string;
   iv: string;
@@ -248,5 +261,165 @@ export class Setup2FAUseCase extends AuthUseCase {
       label: `${app.name} - ${username}`,
       issuer: app.name,
     });
+  }
+}
+
+/**
+ * Class responsible for verifying a user's 2FA TOTP code and
+ * issuing authentication tokens upon successful verification.
+ *
+ * @extends AuthUseCase
+ *
+ * @remarks
+ * - Uses Zod schema to validate input data.
+ * - Ensures the `twoFACode` is exactly 6 characters long.
+ * - Handles 2FA verification logic, including decryption of
+ *   stored TOTP secret and updating user metadata.
+ */
+export class Verify2FAUseCase extends AuthUseCase {
+  /**
+   * Zod schema for validating the 2FA verification input.
+   *
+   * @private
+   */
+  private readonly schema = z.object({
+    /** Authorization header containing the pending 2FA JWT token. */
+    authHeader: z.string(),
+    /** 6-digit TOTP code provided by the user. */
+    twoFACode: z.string().length(6),
+  });
+
+  /**
+   * Creates a new instance of the 2FA use case class.
+   *
+   * @param {UserService} service - The user service responsible for fetching
+   *   and updating user entities in the database.
+   *
+   * @remarks
+   * - The `service` is injected using InversifyJS.
+   * - Passed to the base `AuthUseCase` constructor for shared authentication utilities.
+   */
+  constructor(@inject(UserService) protected readonly service: UserService) {
+    super(service);
+  }
+
+  /**
+   * Executes the 2FA verification flow for a user.
+   *
+   * @public
+   * @param {string | undefined} authHeader - The pending 2FA JWT token sent in the Authorization header.
+   * @param {string} twoFACode - The 6-digit TOTP code provided by the user.
+   * @returns {Promise<{ accessToken: string; refreshToken: string }>} Newly generated JWT tokens upon successful verification.
+   *
+   * @throws {BadRequestError} If the `authHeader` is missing or invalid.
+   * @throws {UnauthorizedError} If the provided TOTP code is incorrect.
+   *
+   * @remarks
+   * - Validates input using Zod schema.
+   * - Extracts and verifies the user from the pending 2FA token.
+   * - Delegates to `verify2FACode` for TOTP verification and secret decryption.
+   * - Upon success, resets failed attempts, marks 2FA as setup if first-time verification, and returns fresh JWTs.
+   */
+  public async execute(authHeader: string | undefined, twoFACode: string) {
+    const parsed = this.schema.parse({ authHeader, twoFACode });
+    const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
+    const userId: string = this.decodeUserId(pending2FAToken);
+    await this.verify2FACode(parsed.twoFACode, userId);
+    return this.generateTokens(userId as unknown as ObjectId);
+  }
+
+  /**
+   * Decodes and validates a user ID from the pending 2FA token.
+   *
+   * @private
+   * @param {string} token - The pending 2FA JWT token.
+   * @returns {string} Extracted user ID.
+   * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
+   */
+  private decodeUserId(token: string): string {
+    try {
+      const payload: JwtPayload = verify(token, jwt.p2a) as JwtPayload;
+      if (payload.type !== "2fa_pending") {
+        throw new BadRequestError("Wrong token type.");
+      }
+
+      return payload.id;
+    } catch (error: any) {
+      throw new BadRequestError(
+        `Token verification error: ${error.name} - "${error.message}"`
+      );
+    }
+  }
+
+  /**
+   * Decrypts a previously AES-GCM encrypted 2FA secret.
+   *
+   * @private
+   * @param {string} ciphertext - The encrypted secret string.
+   * @param {string} iv - Initialization vector used during encryption.
+   * @param {string} tag - GCM authentication tag for integrity verification.
+   * @returns {string} The decrypted plain Base32-encoded 2FA secret.
+   *
+   * @remarks
+   * - This method verifies the authenticity of the ciphertext using the GCM tag.
+   * - Throws an error if the ciphertext is malformed or has been tampered with.
+   */
+  private decrypt2FASecret(
+    ciphertext: string,
+    iv: string,
+    tag: string
+  ): string {
+    const encoding = twoFA.key_ecd as BufferEncoding;
+    // Create a decipher.
+    const decipher = createDecipheriv(
+      twoFA.enc_alg,
+      Buffer.from(twoFA.mst_key, encoding),
+      Buffer.from(iv, encoding)
+    ) as DecipherGCM;
+
+    // Check the ciphertext for invalidity or malformation.
+    decipher.setAuthTag(Buffer.from(tag, encoding));
+
+    // Decrypt the secret value.
+    let secret = decipher.update(ciphertext, encoding, "utf-8");
+    secret += decipher.final("utf-8");
+
+    return secret;
+  }
+
+  private getDecryptedSecret(user: User): string {
+    const { ciphertext, iv, tag } = user.twoFA.twoFASecret;
+    return this.decrypt2FASecret(ciphertext, iv, tag);
+  }
+
+  /**
+   * Verifies a 2FA code for the given user ID.
+   * Updates user's 2FA state on successful verification.
+   *
+   * @private
+   * @param {string} code - The 6-digit TOTP code provided by the user.
+   * @param {string} id - The user ID to verify against.
+   * @throws {UnauthorizedError} If the code is invalid.
+   */
+  private async verify2FACode(code: string, id: string): Promise<void> {
+    const user: User = await this.checkExistance(id, "id", "absence");
+    const decryptedSecret: string = this.getDecryptedSecret(user);
+    const result = speakeasy.totp.verify({
+      secret: decryptedSecret,
+      token: code,
+      encoding: twoFA.key_ecd as Encoding,
+      window: 1,
+    });
+
+    if (!result) {
+      if (user.twoFA.failed2FAAttempts !== undefined)
+        user.twoFA.failed2FAAttempts += 1;
+      throw new UnauthorizedError("Wrong 2FA token.");
+    }
+
+    if (!user.twoFA.is2FASetUp) user.twoFA.is2FASetUp = true;
+    user.twoFA.failed2FAAttempts = 0;
+    user.twoFA.last2FAVerifiedAt = new Date();
+    await user.save();
   }
 }
