@@ -55,6 +55,21 @@ export interface UserAuth {
 }
 
 /**
+ * Represents the encrypted secret used for two-factor authentication (2FA),
+ * stored using AES encryption.
+ *
+ * @interface TwoFASecret
+ * @property {string} ciphertext - The encrypted value of the secret.
+ * @property {string} iv - The initialization vector used during encryption.
+ * @property {string} tag - The authentication tag for verifying data integrity.
+ */
+export interface TwoFASecret {
+  ciphertext: string;
+  iv: string;
+  tag: string;
+}
+
+/**
  * User Two-Factor Authentication (2FA) settings.
  *
  * @interface User2FA
@@ -66,7 +81,7 @@ export interface UserAuth {
  */
 export interface User2FA {
   is2FASetUp?: boolean;
-  twoFASecret: string;
+  twoFASecret: TwoFASecret;
   last2FAVerifiedAt?: Date;
   failed2FAAttempts?: number;
   recoveryCodes?: string[];
