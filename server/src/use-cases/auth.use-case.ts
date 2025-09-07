@@ -75,6 +75,29 @@ export class AuthUseCase {
     const salt: string = await genSalt(saltRounds);
     return await hash(password, salt);
   }
+
+  /**
+   * Extracts and validates a bearer token from the given authorization header.
+   *
+   * @private
+   * @param {string | undefined} header - The raw `Authorization` header value (e.g. `"Bearer <token>"`).
+   * @returns {string} The extracted token if the header is valid.
+   *
+   * @throws {BadRequestError} If the header is missing, not a string, does not use the `Bearer` scheme, or
+   *                           does not contain a token.
+   */
+  protected readAuthHeader(header: string | undefined): string {
+    if (!header || typeof header !== "string") {
+      throw new BadRequestError("Invalid header.");
+    }
+
+    const [scheme, token] = header.split(" ");
+    if (scheme !== "Bearer" || !token) {
+      throw new BadRequestError("Invalid header scheme or missing token.");
+    }
+
+    return token;
+  }
 }
 
 export class RegisterUseCase extends AuthUseCase {
