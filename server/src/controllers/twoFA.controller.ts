@@ -2,7 +2,11 @@ import { Request, Response } from "express";
 
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
-import { Setup2FAUseCase, Verify2FAUseCase } from "../use-cases/twoFAUseCase";
+import {
+  Setup2FAUseCase,
+  Initiate2FAUseCase,
+  Verify2FAUseCase,
+} from "../use-cases/twoFAUseCase";
 
 class TwoFAController {
   constructor(private readonly container = Container()) {}
@@ -26,6 +30,14 @@ class TwoFAController {
     );
     res.cookie("refresh-token", refreshToken);
     res.status(200).json({ accessToken });
+  });
+
+  public initiate = asyncHandler(async (req: Request, res: Response) => {
+    const usecase = this.container.get(Initiate2FAUseCase);
+    const pending2FAToken: string = await usecase.execute(
+      req.headers["x-access-token"]
+    );
+    res.status(200).json({ pending2FAToken });
   });
 }
 
