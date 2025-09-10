@@ -12,7 +12,7 @@ import { ObjectId } from "mongodb";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
-import { JwtPayload, verify } from "jsonwebtoken";
+import { sign, verify, JwtPayload } from "jsonwebtoken";
 import { app, twoFA, jwt } from "../config/env";
 import { BadRequestError, UnauthorizedError } from "../errors/http-errors";
 import { User } from "../types/user.type";
@@ -421,5 +421,88 @@ export class Verify2FAUseCase extends AuthUseCase {
     user.twoFA.failed2FAAttempts = 0;
     user.twoFA.last2FAVerifiedAt = new Date();
     await user.save();
+  }
+}
+
+/**
+ * Use case for initiating the setup of Two-Factor Authentication (2FA).
+ *
+ * This use case validates the provided access token, ensures the user
+ * does not already have 2FA enabled, and issues a short-lived
+ * `2fa_pending` token which will be used in the 2FA setup process.
+ *
+ * @class Initiate2FAUseCase
+ * @extends AuthUseCase
+ */
+export class Initiate2FAUseCase extends AuthUseCase {
+  /**
+   * Zod schema to validate the required access token header.
+   * Ensures the token is present and is a string.
+   */
+  private readonly schema = z.object({
+    accessTokenHeader: z.string(),
+  });
+
+  /**
+   * Creates an instance of Initiate2FAUseCase.
+   *
+   * @param service - Injected user service to access and validate users.
+   */
+  constructor(@inject(UserService) protected readonly service: UserService) {
+    super(service);
+  }
+
+  /**
+   * Executes the process of turning on 2FA.
+   *
+   * @param accessTokenHeader - The raw `Authorization` header value from the client.
+   * @returns A short-lived JWT (`2fa_pending`) used to complete the 2FA setup flow.
+   * @throws {BadRequestError} If the user already has 2FA enabled or the token is invalid.
+   */
+  public async execute(accessTokenHeader: string | string[] | undefined) {
+    // Validate header input with Zod.
+    const parsed = this.schema.parse({ accessTokenHeader });
+    // Extract and normalize the access token from the header.
+    const accessToken = this.readAuthHeader(parsed.accessTokenHeader);
+    // Decode and verify the user ID from the access token.
+    const userId = this.decodeUserId(accessToken);
+    // Ensure the user exists in the database.
+    const user: User = await this.checkExistance(userId, "id", "absence");
+
+    // Prevent enabling 2FA if it's already active
+    if (user.twoFA.is2FASetUp) {
+      throw new BadRequestError("2FA is already setup.");
+    }
+
+    // Issue a temporary pending 2FA token to proceed with setup
+    const pending2FAToken: string = sign(
+      { id: userId, type: "2fa_pending" },
+      jwt.p2a,
+      { expiresIn: "720s" }
+    );
+
+    return pending2FAToken;
+  }
+
+  /**
+   * Decodes and validates a user ID from the given access token.
+   *
+   * @param token - The JWT access token to verify.
+   * @returns The user ID embedded in the token.
+   * @throws {BadRequestError} If token verification fails or the token type is not `access-token`.
+   */
+  private decodeUserId(token: string): string {
+    try {
+      const payload: JwtPayload = verify(token, jwt.acs) as JwtPayload;
+      if (payload.type !== "access-token") {
+        throw new BadRequestError("Wrong token type.");
+      }
+
+      return payload.id;
+    } catch (error: any) {
+      throw new BadRequestError(
+        `Token verification error: ${error.name} - "${error.message}"`
+      );
+    }
   }
 }
