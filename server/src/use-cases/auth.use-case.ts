@@ -339,9 +339,7 @@ export class LoginUseCase extends AuthUseCase {
 
     await this.comparePasswords(password, this.user.auth.password);
 
-    const tokens = this.generateTokens(this.user._id as ObjectId);
-
-    return tokens;
+    return this.decideStrategy();
   }
 
   private async comparePasswords(
@@ -353,5 +351,19 @@ export class LoginUseCase extends AuthUseCase {
     if (!match) {
       throw new UnauthorizedError("Incorrect password.");
     }
+  }
+
+  private decideStrategy() {
+    let payload: string | { accessToken: string; refreshToken: string };
+
+    if (this.user?.twoFA.is2FASetUp) {
+      payload = sign({ id: this.user._id, type: "2fa_pending" }, jwt.p2a, {
+        expiresIn: "420s",
+      });
+    } else {
+      payload = this.generateTokens(this.user?._id as ObjectId);
+    }
+
+    return payload;
   }
 }
