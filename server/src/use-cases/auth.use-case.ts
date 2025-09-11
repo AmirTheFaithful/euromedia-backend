@@ -64,8 +64,12 @@ export class AuthUseCase {
     refreshToken: string;
     accessToken: string;
   } {
-    const refreshToken: string = sign({ id }, jwt.rfs, { expiresIn: "30d" });
-    const accessToken: string = sign({ id }, jwt.acs, { expiresIn: "15m" });
+    const refreshToken: string = sign({ id, type: "refresh-token" }, jwt.rfs, {
+      expiresIn: "30d",
+    });
+    const accessToken: string = sign({ id, type: "access-token" }, jwt.acs, {
+      expiresIn: "300s",
+    });
 
     return { refreshToken, accessToken };
   }
