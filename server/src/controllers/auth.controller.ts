@@ -21,11 +21,16 @@ class AuthController {
 
   public login = asyncHandler(async (req: Request, res: Response) => {
     const container = this.container.get(LoginUseCase);
-    const tokens = await container.execute(req.body);
-    res.cookie("refresh-token", tokens.refreshToken);
+    const payload = await container.execute(req.body);
+    if (typeof payload === "string") {
+      res.status(200).json({ data: payload });
+      return;
+    }
+
+    res.cookie("refresh-token", payload.refreshToken);
     res
       .status(200)
-      .json({ data: tokens.accessToken, message: "Login success." });
+      .json({ accessToken: payload.accessToken, message: "Login success." });
   });
 
   public verifyEmail = asyncHandler(async (req: Request, res: Response) => {
