@@ -133,7 +133,7 @@ export class Setup2FAUseCase extends AuthUseCase {
    * @throws {BadRequestError} If the token is invalid or the user does not exist.
    */
   private async getVerifiedUser(pending2FAToken: string): Promise<User> {
-    const userId: string = this.decodeUserId(pending2FAToken);
+    const userId: string = this.decodeUserId(pending2FAToken, "2fa_pending");
     const user: User = await this.checkExistance(userId, "id", "absence");
     return user;
   }
@@ -163,28 +163,6 @@ export class Setup2FAUseCase extends AuthUseCase {
    */
   private formatUsername(user: User): string {
     return `${user.meta.firstname} ${user.meta.lastname}`;
-  }
-
-  /**
-   * Decodes and validates a user ID from the pending 2FA token.
-   *
-   * @param {string} token - The pending 2FA JWT token.
-   * @returns {string} Extracted user ID.
-   * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
-   */
-  private decodeUserId(token: string): string {
-    try {
-      const payload: JwtPayload = verify(token, jwt.p2a) as JwtPayload;
-      if (payload.type !== "2fa_pending") {
-        throw new BadRequestError("Wrong token type.");
-      }
-
-      return payload.id;
-    } catch (error: any) {
-      throw new BadRequestError(
-        `Token verification error: ${error.name} - "${error.message}"`
-      );
-    }
   }
 
   /**
@@ -323,32 +301,9 @@ export class Verify2FAUseCase extends AuthUseCase {
   public async execute(authHeader: string | undefined, twoFACode: string) {
     const parsed = this.schema.parse({ authHeader, twoFACode });
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
-    const userId: string = this.decodeUserId(pending2FAToken);
+    const userId: string = this.decodeUserId(pending2FAToken, "2fa_pending");
     await this.verify2FACode(parsed.twoFACode, userId);
     return this.generateTokens(userId as unknown as ObjectId);
-  }
-
-  /**
-   * Decodes and validates a user ID from the pending 2FA token.
-   *
-   * @private
-   * @param {string} token - The pending 2FA JWT token.
-   * @returns {string} Extracted user ID.
-   * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
-   */
-  private decodeUserId(token: string): string {
-    try {
-      const payload: JwtPayload = verify(token, jwt.p2a) as JwtPayload;
-      if (payload.type !== "2fa_pending") {
-        throw new BadRequestError("Wrong token type.");
-      }
-
-      return payload.id;
-    } catch (error: any) {
-      throw new BadRequestError(
-        `Token verification error: ${error.name} - "${error.message}"`
-      );
-    }
   }
 
   /**
@@ -465,7 +420,7 @@ export class Initiate2FAUseCase extends AuthUseCase {
     // Extract and normalize the access token from the header.
     const accessToken = this.readAuthHeader(parsed.accessTokenHeader);
     // Decode and verify the user ID from the access token.
-    const userId = this.decodeUserId(accessToken);
+    const userId = this.decodeUserId(accessToken, "access-token");
     // Ensure the user exists in the database.
     const user: User = await this.checkExistance(userId, "id", "absence");
 
@@ -482,27 +437,5 @@ export class Initiate2FAUseCase extends AuthUseCase {
     );
 
     return pending2FAToken;
-  }
-
-  /**
-   * Decodes and validates a user ID from the given access token.
-   *
-   * @param token - The JWT access token to verify.
-   * @returns The user ID embedded in the token.
-   * @throws {BadRequestError} If token verification fails or the token type is not `access-token`.
-   */
-  private decodeUserId(token: string): string {
-    try {
-      const payload: JwtPayload = verify(token, jwt.acs) as JwtPayload;
-      if (payload.type !== "access-token") {
-        throw new BadRequestError("Wrong token type.");
-      }
-
-      return payload.id;
-    } catch (error: any) {
-      throw new BadRequestError(
-        `Token verification error: ${error.name} - "${error.message}"`
-      );
-    }
   }
 }

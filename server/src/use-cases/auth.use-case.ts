@@ -83,7 +83,7 @@ export class AuthUseCase {
   /**
    * Extracts and validates a bearer token from the given authorization header.
    *
-   * @private
+   * @protected
    * @param {string | undefined} header - The raw `Authorization` header value (e.g. `"Bearer <token>"`).
    * @returns {string} The extracted token if the header is valid.
    *
@@ -101,6 +101,33 @@ export class AuthUseCase {
     }
 
     return token;
+  }
+
+  /**
+   * Decodes and validates a user ID from the pending 2FA token.
+   *
+   * @protected
+   * @param {string} token The pending 2FA JWT token.
+   * @param {"access-token" | "refresh-token" | "2fa_pending"} expectedType System-defined type of the given JWT token.
+   * @returns {string} Extracted user ID.
+   * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
+   */
+  protected decodeUserId(
+    token: string,
+    expectedType: "access-token" | "refresh-token" | "2fa_pending"
+  ): string {
+    try {
+      const payload: JwtPayload = verify(token, jwt.p2a) as JwtPayload;
+      if (payload.type !== expectedType) {
+        throw new BadRequestError("Wrong token type.");
+      }
+
+      return payload.id;
+    } catch (error: any) {
+      throw new BadRequestError(
+        `Token verification error: ${error.name} - "${error.message}"`
+      );
+    }
   }
 }
 
