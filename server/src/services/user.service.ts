@@ -2,7 +2,8 @@ import { ObjectId } from "mongodb";
 import { injectable, inject } from "inversify";
 
 import UserRepo from "../repositories/user.repo";
-import { CreateUserDTO, UpdateUserDTO } from "../types/user.type";
+import { CreateUserDTO } from "../types/user.type";
+import { UpdateUserRequestBody } from "../types/api.type";
 
 @injectable()
 class UserService {
@@ -21,7 +22,7 @@ class UserService {
   }
 
   public async createNewUser(data: CreateUserDTO) {
-    // Distribute plain data object by setting 'meta' and 'auth' categories.
+    // Distribute flat data object by setting 'meta' and 'auth' categories.
     return this.repo.createNewUser({
       meta: {
         firstname: data.firstname,
@@ -34,11 +35,11 @@ class UserService {
     });
   }
 
-  public async updateUserById(id: ObjectId, data: UpdateUserDTO) {
+  public async updateUserById(id: ObjectId, data: UpdateUserRequestBody) {
     return this.repo.updateUserById(id, data);
   }
 
-  public async updateUserByEmail(email: string, data: UpdateUserDTO) {
+  public async updateUserByEmail(email: string, data: UpdateUserRequestBody) {
     return this.repo.updateUserByEmail(email, data);
   }
 

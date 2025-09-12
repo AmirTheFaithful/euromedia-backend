@@ -10,7 +10,7 @@ export class HttpError extends Error {
 }
 
 export class ConflictError extends HttpError {
-  constructor(message: string = "User exists.") {
+  constructor(message: string = "Document exists.") {
     super(409, message);
   }
 }
