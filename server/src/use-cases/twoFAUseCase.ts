@@ -343,6 +343,10 @@ export class Verify2FAUseCase extends AuthUseCase {
   }
 
   private getDecryptedSecret(user: User): string {
+    if (!user.twoFA.twoFASecret) {
+      throw new UnauthorizedError("2FA is not active.");
+    }
+
     const { ciphertext, iv, tag } = user.twoFA.twoFASecret;
     return this.decrypt2FASecret(ciphertext, iv, tag);
   }
