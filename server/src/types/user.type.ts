@@ -80,11 +80,11 @@ export interface TwoFASecret {
  * @property {string[]} recoveryCodes - Recovery codes for 2FA fallback.
  */
 export interface User2FA {
-  is2FASetUp?: boolean;
-  twoFASecret: TwoFASecret;
+  is2FASetUp: boolean;
+  twoFASecret?: TwoFASecret;
   last2FAVerifiedAt?: Date;
-  failed2FAAttempts?: number;
-  recoveryCodes?: string[];
+  failed2FAAttempts: number;
+  recoveryCodes: string[];
 }
 
 /**
