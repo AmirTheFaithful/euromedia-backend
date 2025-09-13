@@ -443,3 +443,66 @@ export class Initiate2FAUseCase extends AuthUseCase {
     return pending2FAToken;
   }
 }
+
+/**
+ * Use case responsible for deinitializing Two-Factor Authentication (2FA)
+ * for an authenticated user.
+ *
+ * This process revokes and securely clears all 2FA-related data
+ * (e.g., secrets, recovery codes, verification timestamps, and failed attempts),
+ * ensuring that the user account is returned to a non-2FA state.
+ *
+ * Extends {@link AuthUseCase} to leverage common authentication utilities.
+ */
+export class Deinit2FAUseCase extends AuthUseCase {
+  /**
+   * Zod schema to validate the required access token header.
+   * Ensures the token is present and is a string.
+   */
+  private readonly schema = z.object({
+    accessTokenHeader: z.string(),
+  });
+
+  /**
+   * Creates an instance of Deinit2FAUseCase.
+   *
+   * @param service - Injected user service to access and validate users.
+   */
+  constructor(@inject(UserService) protected readonly service: UserService) {
+    super(service);
+  }
+
+  /**
+   * Executes the deinitialization of 2FA for the user identified
+   * by the provided JWT access token.
+   *
+   * @param accessTokenHeader The `Authorization` header value containing
+   * the access token (e.g., `"Bearer <token>"`), or an equivalent header value.
+   * Must represent a valid access token of type `"access-token"`.
+   *
+   * @throws {BadRequestError} If the token is invalid, expired,
+   * or if 2FA is already inactive for the user.
+   * @throws {UnauthorizedError} If authentication fails.
+   *
+   * @returns Resolves when 2FA has been successfully deinitialized
+   * and all related fields are securely cleared from the user entity.
+   */
+  public async execute(accessTokenHeader: string | string[] | undefined) {
+    const parsed = this.schema.parse({ accessTokenHeader });
+    const accessToken = this.readAuthHeader(parsed.accessTokenHeader);
+    const userId = this.decodeUserId(accessToken, "access-token");
+    const user = await this.checkExistance(userId, "id", "absence");
+
+    if (!user.twoFA?.is2FASetUp) {
+      throw new BadRequestError("2FA is already inactive.");
+    }
+
+    // Droping all the 2FA properties and save user obbject with nullified 2FA options.
+    user.twoFA.is2FASetUp = false;
+    user.twoFA.twoFASecret = undefined;
+    user.twoFA.last2FAVerifiedAt = undefined;
+    user.twoFA.recoveryCodes = [];
+    user.twoFA.failed2FAAttempts = 0;
+    await user.save();
+  }
+}
