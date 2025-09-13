@@ -9,6 +9,7 @@ import {
   DecipherGCM,
 } from "crypto";
 import { ObjectId } from "mongodb";
+import { hash } from "bcrypt";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
@@ -37,6 +38,7 @@ interface SetupInputData {
  */
 interface SetupOutputData {
   otpAuthURL: string;
+  recoveryCodes: string[];
 }
 
 /**
@@ -120,8 +122,10 @@ export class Setup2FAUseCase extends AuthUseCase {
       base32Secret,
       this.formatUsername(user)
     );
+    const recoveryCodes: string[] = this.generateRecoveryCodes();
+    await this.hashRecoveryCodes(recoveryCodes, user);
 
-    return { otpAuthURL };
+    return { otpAuthURL, recoveryCodes };
   }
 
   /**
@@ -239,6 +243,49 @@ export class Setup2FAUseCase extends AuthUseCase {
       label: `${app.name} - ${username}`,
       issuer: app.name,
     });
+  }
+
+  /**
+   * Generates an array of random recovery codes for 2FA.
+   *
+   * @private
+   * @returns {string[]} Array of uppercase hexadecimal recovery codes.
+   */
+  private generateRecoveryCodes(): string[] {
+    const recoveryCodes: string[] = [];
+    const count: number = 10;
+
+    for (let i = 0; i < count; i++) {
+      const code: string = randomBytes(5)
+        .toString("hex")
+        .slice(0, count)
+        .toUpperCase();
+      recoveryCodes.push(code);
+    }
+
+    return recoveryCodes;
+  }
+
+  /**
+   * Hashes an array of recovery codes and stores them in the user entity.
+   *
+   * Uses bcrypt with a specified number of salt rounds. Saves the user entity
+   * after all codes have been hashed.
+   *
+   * @private
+   * @param {string[]} codes - Plain recovery codes to hash.
+   * @param {User} user - User entity where hashed codes will be stored.
+   * @returns {Promise<void>} Resolves when all codes are hashed and saved.
+   */
+  private async hashRecoveryCodes(codes: string[], user: User): Promise<void> {
+    const saltRounds: number = 12;
+
+    const hashedCodes: string[] = await Promise.all(
+      codes.map((code) => hash(code, saltRounds))
+    );
+
+    user.twoFA.recoveryCodes.push(...hashedCodes);
+    await user.save();
   }
 }
 
