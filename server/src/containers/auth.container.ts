@@ -7,6 +7,7 @@ import {
   LoginUseCase,
   ResetPasswordRequestUseCase,
   ResetPasswordUseCase,
+  RefreshAccessToken,
 } from "../use-cases/auth.use-case";
 
 export default (container: Container): void => {
@@ -16,4 +17,5 @@ export default (container: Container): void => {
   container.bind(LoginUseCase).toSelf();
   container.bind(ResetPasswordRequestUseCase).toSelf();
   container.bind(ResetPasswordUseCase).toSelf();
+  container.bind(RefreshAccessToken).toSelf();
 };
