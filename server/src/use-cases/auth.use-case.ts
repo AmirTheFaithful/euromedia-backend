@@ -347,13 +347,13 @@ export class ResetPasswordUseCase extends AuthUseCase {
       throw new NotFoundError(`User not found with email '${email}'.`);
     }
 
-    const token = headers["authorization"];
+    const token = headers["authorization"] as string;
 
     if (!token) {
       throw new UnauthorizedError("Verification token missing.");
     }
 
-    const payload = verify(token, jwt.eml) as JwtPayload;
+    const payload = verify(token.split(" ")[1], jwt.eml) as JwtPayload;
     const id: ObjectId = payload.id;
 
     const idUser = await this.service.getUserById(id);
