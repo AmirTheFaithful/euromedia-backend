@@ -117,7 +117,18 @@ export class AuthUseCase {
     expectedType: "access-token" | "refresh-token" | "2fa_pending"
   ): string {
     try {
-      const payload: JwtPayload = verify(token, jwt.p2a) as JwtPayload;
+      // Select the correct secret key based on the expected token type.
+      // - `access-token` → signed with `jwt.acs`
+      // - `2fa_pending` → signed with `jwt.p2a`
+      // - `refresh-token` not handled here (validated elsewhere in the auth flow)
+      let jwt_key: string = "";
+      if (expectedType === "access-token") {
+        jwt_key = jwt.acs;
+      } else if (expectedType === "2fa_pending") {
+        jwt_key = jwt.p2a;
+      }
+
+      const payload: JwtPayload = verify(token, jwt_key) as JwtPayload;
       if (payload.type !== expectedType) {
         throw new BadRequestError("Wrong token type.");
       }
