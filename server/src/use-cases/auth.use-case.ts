@@ -398,3 +398,30 @@ export class LoginUseCase extends AuthUseCase {
     return payload;
   }
 }
+
+export class RefreshAccessToken extends AuthUseCase {
+  private readonly schema = z.string();
+
+  constructor(@inject(UserService) protected readonly service: UserService) {
+    super(service);
+  }
+
+  public async execute(refreshToken: string) {
+    const parsedToken: string = this.schema.parse(refreshToken);
+
+    try {
+      const payload = verify(parsedToken, jwt.rfs) as JwtPayload;
+      const userId: string = payload.id;
+      const user: User = await this.checkExistance(userId, "id", "absence");
+      if (!user) {
+        throw new NotFoundError("User not found.");
+      }
+
+      return sign({ id: userId, type: "access-token" }, jwt.acs, {
+        expiresIn: "300s",
+      });
+    } catch (error) {
+      throw new UnauthorizedError("Token verification error.");
+    }
+  }
+}
