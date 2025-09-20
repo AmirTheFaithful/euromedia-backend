@@ -4,8 +4,9 @@ import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
 import {
   Setup2FAUseCase,
-  Initiate2FAUseCase,
   Verify2FAUseCase,
+  Initiate2FAUseCase,
+  Deinit2FAUseCase,
 } from "../use-cases/twoFAUseCase";
 
 class TwoFAController {
@@ -26,7 +27,8 @@ class TwoFAController {
     const usecase = this.container.get(Verify2FAUseCase);
     const { accessToken, refreshToken } = await usecase.execute(
       req.headers["authorization"],
-      req.body.twoFACode
+      req.body.twoFACode,
+      req.body.recoveryCode
     );
     res.cookie("refresh-token", refreshToken);
     res.status(200).json({ accessToken });
@@ -38,6 +40,12 @@ class TwoFAController {
       req.headers["x-access-token"]
     );
     res.status(200).json({ pending2FAToken });
+  });
+
+  public deinit = asyncHandler(async (req: Request, res: Response) => {
+    const usecase = this.container.get(Deinit2FAUseCase);
+    await usecase.execute(req.headers["x-access-token"]);
+    res.status(200).json({ message: "2FA deinit success. " });
   });
 }
 
