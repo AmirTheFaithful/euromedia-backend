@@ -50,13 +50,10 @@ class AuthController {
       // Retrieve verification token from the use-case,
       const token = await container.execute(req.body);
 
-      // And set it to the response headers.
-      res.setHeader("Authorization", token);
-
+      // And send it as response.
       res
         .status(200)
-        .json({ message: "Resetting password rquest accepted." })
-        .end();
+        .json({ message: "Resetting password rquest accepted.", token });
     }
   );
 
