@@ -9,7 +9,7 @@ import {
   DecipherGCM,
 } from "crypto";
 import { ObjectId } from "mongodb";
-import { hash } from "bcrypt";
+import { hash, compare } from "bcrypt";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
@@ -398,6 +398,65 @@ export class Verify2FAUseCase extends AuthUseCase {
     return this.decrypt2FASecret(ciphertext, iv, tag);
   }
 
+  private async decideStrategy(
+    totp: string | undefined,
+    recoveryCode: string | undefined,
+    userId: string
+  ): Promise<void> {
+    const user: User = await this.checkExistance(userId, "id", "absence");
+    if (totp) {
+      await this.verify2FACode(totp, userId);
+    } else if (recoveryCode) {
+      await this.verifyRecoveryCode(recoveryCode, user);
+    }
+  }
+
+  /**
+   * Verifies a recovery code for a given user as a fallback mechanism
+   * when TOTP-based 2FA cannot be used.
+   *
+   * Recovery codes are single-use: once a code is successfully matched
+   * against its bcrypt hash, it is immediately removed from the user's
+   * stored recovery codes to prevent reuse.
+   *
+   * @param recoveryCode - The plain-text recovery code provided by the client.
+   * @param userId - The unique identifier of the user whose codes are validated.
+   *
+   * @returns {Promise<boolean>} Resolves with `true` if a valid recovery code
+   * was found and consumed. Rejects otherwise.
+   *
+   * @throws {UnauthorizedError} If the given recovery code does not match
+   * any of the stored (hashed) recovery codes for the user.
+   *
+   * @remarks
+   * - Codes are compared using `bcrypt.compare`.
+   * - On success, the verified code is removed and the user entity is saved.
+   * - Ensures that recovery codes follow a strict one-time-use policy.
+   */
+  private async verifyRecoveryCode(
+    recoveryCode: string,
+    user: User
+  ): Promise<boolean> {
+    const recoveryCodes: string[] = user.twoFA.recoveryCodes;
+
+    for (let i = 0; i < recoveryCodes.length; i++) {
+      const isCodeMatch: boolean = await compare(
+        recoveryCode,
+        recoveryCodes[i]
+      );
+
+      if (isCodeMatch) {
+        // Delete verified code from DB-stored recovery codes array.
+        user.twoFA.recoveryCodes.splice(i, 1);
+        // Save changes in recovery codes array and return out.
+        await user.save();
+        return true;
+      }
+    }
+
+    throw new UnauthorizedError("Invalid TOTP token or recovery code.");
+  }
+
   /**
    * Verifies a 2FA code for the given user ID.
    * Updates user's 2FA state on successful verification.
@@ -539,10 +598,6 @@ export class Deinit2FAUseCase extends AuthUseCase {
     const accessToken = this.readAuthHeader(parsed.accessTokenHeader);
     const userId = this.decodeUserId(accessToken, "access-token");
     const user = await this.checkExistance(userId, "id", "absence");
-
-    if (!user.twoFA?.is2FASetUp) {
-      throw new BadRequestError("2FA is already inactive.");
-    }
 
     // Droping all the 2FA properties and save user obbject with nullified 2FA options.
     user.twoFA.is2FASetUp = false;
