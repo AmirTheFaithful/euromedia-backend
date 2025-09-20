@@ -124,7 +124,6 @@ export class Setup2FAUseCase extends AuthUseCase {
     );
     const recoveryCodes: string[] = this.generateRecoveryCodes();
     await this.hashRecoveryCodes(recoveryCodes, user);
-
     return { otpAuthURL, recoveryCodes };
   }
 
@@ -310,8 +309,10 @@ export class Verify2FAUseCase extends AuthUseCase {
   private readonly schema = z.object({
     /** Authorization header containing the pending 2FA JWT token. */
     authHeader: z.string(),
-    /** 6-digit TOTP code provided by the user. */
-    twoFACode: z.string().length(6),
+    /** 6-digit TOTP code provided by the user. Optional as user can provide a recovery code instead. */
+    twoFACode: z.string().length(6).optional(),
+    /** 10-digit HEX code provided by the user. Optional as user can provide the twoHash code instead. */
+    recoveryCodes: z.string().length(10).optional(),
   });
 
   /**
@@ -332,8 +333,9 @@ export class Verify2FAUseCase extends AuthUseCase {
    * Executes the 2FA verification flow for a user.
    *
    * @public
-   * @param {string | undefined} authHeader - The pending 2FA JWT token sent in the Authorization header.
-   * @param {string} twoFACode - The 6-digit TOTP code provided by the user.
+   * @param {string | undefined} authHeader - The pending 2FA JWT token sent in the Authorization header (Optional).
+   * @param {string} twoFACode - The 6-digit TOTP code provided by the user. Optional
+   * @param {string} recoveryCode - The 10-uppercased-character long verification code. Optional
    * @returns {Promise<{ accessToken: string; refreshToken: string }>} Newly generated JWT tokens upon successful verification.
    *
    * @throws {BadRequestError} If the `authHeader` is missing or invalid.
@@ -342,14 +344,18 @@ export class Verify2FAUseCase extends AuthUseCase {
    * @remarks
    * - Validates input using Zod schema.
    * - Extracts and verifies the user from the pending 2FA token.
-   * - Delegates to `verify2FACode` for TOTP verification and secret decryption.
+   * - If a TOTP code is provided, delegates to `verify2FACode`; otherwise, uses `verifyRecoveryCode` and decrypts the secret.
    * - Upon success, resets failed attempts, marks 2FA as setup if first-time verification, and returns fresh JWTs.
    */
-  public async execute(authHeader: string | undefined, twoFACode: string) {
-    const parsed = this.schema.parse({ authHeader, twoFACode });
+  public async execute(
+    authHeader: string | undefined,
+    twoFACode?: string,
+    recoveryCode?: string
+  ) {
+    const parsed = this.schema.parse({ authHeader, twoFACode, recoveryCode });
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
     const userId: string = this.decodeUserId(pending2FAToken, "2fa_pending");
-    await this.verify2FACode(parsed.twoFACode, userId);
+    await this.decideStrategy(parsed.twoFACode, recoveryCode, userId);
     return this.generateTokens(userId as unknown as ObjectId);
   }
 
