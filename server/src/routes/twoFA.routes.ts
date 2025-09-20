@@ -8,4 +8,5 @@ export const twoFARoutes = (router: Router): void => {
   router.post(baseURL + "setup", twoFAController.setup);
   router.post(baseURL + "verify", twoFAController.verify);
   router.patch(baseURL + "initiate", twoFAController.initiate);
+  router.patch(baseURL + "deinit", twoFAController.deinit);
 };
