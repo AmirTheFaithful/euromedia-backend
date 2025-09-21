@@ -13,7 +13,7 @@ import { hash, compare } from "bcrypt";
 
 import { AuthUseCase } from "./auth.use-case";
 import UserService from "../services/user.service";
-import { sign, verify, JwtPayload } from "jsonwebtoken";
+import { sign } from "jsonwebtoken";
 import { app, twoFA, jwt } from "../config/env";
 import { BadRequestError, UnauthorizedError } from "../errors/http-errors";
 import { User } from "../types/user.type";
