@@ -10,6 +10,7 @@ import {
   ResetPasswordUseCase,
   RefreshAccessToken,
 } from "../use-cases/auth.use-case";
+import { standardCookieOptions } from "../config/cookies";
 
 class AuthController {
   constructor(private readonly container = Container()) {}
@@ -28,7 +29,7 @@ class AuthController {
       return;
     }
 
-    res.cookie("refresh-token", payload.refreshToken);
+    res.cookie("refresh-token", payload.refreshToken, standardCookieOptions);
     res
       .status(200)
       .json({ accessToken: payload.accessToken, message: "Login success." });

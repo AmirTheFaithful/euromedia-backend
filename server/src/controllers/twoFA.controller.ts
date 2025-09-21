@@ -8,6 +8,7 @@ import {
   Initiate2FAUseCase,
   Deinit2FAUseCase,
 } from "../use-cases/twoFAUseCase";
+import { standardCookieOptions } from "../config/cookies";
 
 class TwoFAController {
   constructor(private readonly container = Container()) {}
@@ -30,7 +31,7 @@ class TwoFAController {
       req.body.twoFACode,
       req.body.recoveryCode
     );
-    res.cookie("refresh-token", refreshToken);
+    res.cookie("refresh-token", refreshToken, standardCookieOptions);
     res.status(200).json({ accessToken });
   });
 
