@@ -6,6 +6,7 @@ export const sys = {
   servPort: process.env.SERVER_PORT!,
   clntPort: process.env.CLIENT_PORT!,
   host: process.env.HOST!,
+  log_level: process.env.LOG_LEVEL!,
 };
 
 export const mongo = {

@@ -2,7 +2,8 @@ import { ObjectId } from "mongodb";
 import { injectable, inject } from "inversify";
 
 import UserModel from "../models/user.model";
-import { User, Users, UpdateUserDTO } from "../types/user.type";
+import { User, Users } from "../types/user.type";
+import { UpdateUserRequestBody } from "../types/api.type";
 
 type AsyncUser = Promise<User | null>;
 
@@ -26,13 +27,16 @@ class UserRepository {
     return new this.model.model(data);
   }
 
-  public async updateUserById(id: ObjectId, data: UpdateUserDTO): AsyncUser {
+  public async updateUserById(
+    id: ObjectId,
+    data: UpdateUserRequestBody
+  ): AsyncUser {
     return this.model.model.findByIdAndUpdate(id, data, { new: true });
   }
 
   public async updateUserByEmail(
     email: string,
-    data: UpdateUserDTO
+    data: UpdateUserRequestBody
   ): AsyncUser {
     return this.model.model.findOneAndUpdate({ "auth.email": email }, data, {
       new: true,

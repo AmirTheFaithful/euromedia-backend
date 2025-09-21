@@ -3,9 +3,8 @@ import { Request, Response } from "express";
 import Container from "../containers";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ResponseBody } from "../types/api.type";
-import { User, Users } from "../types/user.type";
+import { UpdateUserDTO, User, Users } from "../types/user.type";
 import { UserQueries } from "../types/queries.type";
-import { UpdateUserRequestBody } from "../types/api.type";
 import {
   FetchUserUseCase,
   UpdateUserUseCase,
@@ -44,7 +43,7 @@ class UserController {
 
   public updateUser = asyncHandler(
     async (
-      req: Request<any, User, UpdateUserRequestBody, UserQueries>,
+      req: Request<any, User, UpdateUserDTO, UserQueries>,
       res: Response<ResponseBody<User>>
     ) => {
       const updateUserUseCase = this.container.get(UpdateUserUseCase);
