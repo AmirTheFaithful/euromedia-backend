@@ -3,9 +3,13 @@ import { Server, createServer } from "http";
 import app from "./app";
 import { sys } from "../config/env";
 import { connectDB } from "../config/mongo";
-import { createLogger, transports, Logger } from "winston";
+import { logger } from "../config/logger";
 
 const server: Server = createServer(app());
+
+// Logging unhandled exceptions.
+process.on("uncaughtException", (error: Error) => logger.fatal(error));
+process.on("unhandledRejection", (error: Error) => logger.fatal(error));
 
 const startServer = async (): Promise<void> => {
   await connectDB();
@@ -13,12 +17,6 @@ const startServer = async (): Promise<void> => {
     console.log(`Serving API requests at ${sys.host}:${sys.servPort}.`);
   });
 };
-
-// A tool for handling connection errors by logging it.
-const logger: Logger = createLogger({
-  level: "error",
-  transports: [new transports.Console()],
-});
 
 const run = (): void => {
   startServer().catch((error: Error) => {
