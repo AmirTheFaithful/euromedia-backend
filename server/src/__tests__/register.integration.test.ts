@@ -182,6 +182,6 @@ describe("POST auth/register", () => {
       .send(validCredentials);
 
     expect(response.statusCode).toBe(409);
-    expect(response.body.message).toBe("User exists.");
+    expect(response.body.message).toBe("Document exists.");
   });
 });
