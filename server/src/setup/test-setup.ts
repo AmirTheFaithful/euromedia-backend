@@ -1,14 +1,19 @@
 import { connect, connection } from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
 
-import { mongo } from "../config/env";
+let mongoServer: MongoMemoryServer;
 
 beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const uri: string = mongoServer.getUri();
+
   if (connection.readyState === 0) {
-    await connect(mongo.test_uri);
+    await connect(uri, { dbName: "jest" });
   }
 });
 
 afterAll(async () => {
   await connection.dropDatabase();
   await connection.close();
+  await mongoServer.stop();
 });
