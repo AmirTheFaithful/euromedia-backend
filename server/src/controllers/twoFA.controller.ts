@@ -20,6 +20,7 @@ class TwoFAController {
     });
     res.status(200).json({
       otpAuthURL: payload.otpAuthURL,
+      recoveryCodes: payload.recoveryCodes,
       message: "2FA setup success.",
     });
   });
