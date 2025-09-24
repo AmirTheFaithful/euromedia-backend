@@ -466,7 +466,7 @@ export class Verify2FAUseCase extends AuthUseCase {
         // Delete verified code from DB-stored recovery codes array.
         user.twoFA.recoveryCodes.splice(i, 1);
         // Save changes in recovery codes array and return out.
-        await user.save();
+        this.mark2FAAsVerified(user);
         return true;
       }
     }
@@ -499,6 +499,23 @@ export class Verify2FAUseCase extends AuthUseCase {
       throw new UnauthorizedError("Wrong 2FA token.");
     }
 
+    this.mark2FAAsVerified(user);
+  }
+
+  /**
+   * Marks a user’s Two-Factor Authentication (2FA) as fully set up.
+   *
+   * @private
+   * @param {User} user - The user entity whose 2FA setup state will be updated.
+   * @returns {Promise<void>} Resolves when the changes are persisted to the database.
+   *
+   * @remarks
+   * - Sets `is2FASetUp` to `true` if it was not already enabled.
+   * - Resets the `failed2FAAttempts` counter.
+   * - Updates `last2FAVerifiedAt` to the current timestamp.
+   * - Persists all changes by saving the user document.
+   */
+  private async mark2FAAsVerified(user: User) {
     if (!user.twoFA.is2FASetUp) user.twoFA.is2FASetUp = true;
     user.twoFA.failed2FAAttempts = 0;
     user.twoFA.last2FAVerifiedAt = new Date();
