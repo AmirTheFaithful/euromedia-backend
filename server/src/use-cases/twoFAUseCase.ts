@@ -111,12 +111,18 @@ export class Setup2FAUseCase extends AuthUseCase {
    *
    * @param {SetupInputData} data - Input containing the pending 2FA JWT token.
    * @returns {Promise<SetupOutputData>} Object with the OTP Auth URL.
-   * @throws {BadRequestError} If token verification fails or user does not exist.
+   * @throws {BadRequestError} If token verification fails, user's 2FA is already set up or user does not exist.
    */
   public async execute(data: SetupInputData): Promise<SetupOutputData> {
     const parsed: SetupInputData = this.schema.parse(data);
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
     const user: User = await this.getVerifiedUser(pending2FAToken);
+
+    // If user's 2FA is already set up.
+    if (user.twoFA.is2FASetUp) {
+      throw new BadRequestError("2FA is already setup.");
+    }
+
     const base32Secret: string = await this.createAndStoreSecret(user);
     const otpAuthURL: string = this.generateOTPAuthURL(
       base32Secret,
