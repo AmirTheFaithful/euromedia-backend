@@ -47,7 +47,7 @@ class TwoFAController {
   public deinit = asyncHandler(async (req: Request, res: Response) => {
     const usecase = this.container.get(Deinit2FAUseCase);
     await usecase.execute(req.headers["x-access-token"]);
-    res.status(200).json({ message: "2FA deinit success. " });
+    res.status(200).json({ message: "2FA deinit success." });
   });
 }
 
