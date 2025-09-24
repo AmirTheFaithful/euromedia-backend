@@ -318,7 +318,7 @@ export class Verify2FAUseCase extends AuthUseCase {
     /** 6-digit TOTP code provided by the user. Optional as user can provide a recovery code instead. */
     twoFACode: z.string().length(6).optional(),
     /** 10-digit HEX code provided by the user. Optional as user can provide the twoHash code instead. */
-    recoveryCodes: z.string().length(10).optional(),
+    recoveryCode: z.string().length(10).optional(),
   });
 
   /**
@@ -358,6 +358,11 @@ export class Verify2FAUseCase extends AuthUseCase {
     twoFACode?: string,
     recoveryCode?: string
   ) {
+    // If nor 2FA code nor recovery one was provided.
+    if (!twoFACode && !recoveryCode) {
+      throw new BadRequestError("No code provided.");
+    }
+
     const parsed = this.schema.parse({ authHeader, twoFACode, recoveryCode });
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
     const userId: string = this.decodeUserId(pending2FAToken, "2fa_pending");
