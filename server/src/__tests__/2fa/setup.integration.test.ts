@@ -1,6 +1,6 @@
 import request, { Response } from "supertest";
 import { Application } from "express";
-import { totp } from "speakeasy";
+import speakeasy from "speakeasy";
 
 import app from "../../setup/app";
 import { cache } from "../../config/lru";
@@ -102,7 +102,7 @@ describe("POST /auth/2fa/setup", (): void => {
       .split("&issuer=")[0];
 
     // Parse to a twoFACode which is ready to be sent.
-    const twoFACode: string = totp({
+    const twoFACode: string = speakeasy.totp({
       secret: otpAuthURL,
       encoding: "base32",
       digits: 6,
