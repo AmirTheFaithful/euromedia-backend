@@ -83,6 +83,7 @@ export interface User2FA {
   is2FASetUp: boolean;
   twoFASecret?: TwoFASecret;
   last2FAVerifiedAt?: Date;
+  lockedUntil?: Date;
   failed2FAAttempts: number;
   recoveryCodes: string[];
 }

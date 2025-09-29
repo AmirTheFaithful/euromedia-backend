@@ -38,6 +38,8 @@ const TwoFASchema = new Schema<User2FA>({
   twoFASecret: TwoFASecretSchema,
   // Timestamp of last successful 2FA verification
   last2FAVerifiedAt: Date,
+  // Unless this date is not reached, user can't set up the 2FA.
+  lockedUntil: { type: Date, default: null },
   // 2FA recovery codes (hidden from queries)
   recoveryCodes: { type: [String], default: [] },
   // Count of consecutive failed 2FA attempts
