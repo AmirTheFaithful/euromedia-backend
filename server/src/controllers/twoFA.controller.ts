@@ -33,7 +33,7 @@ class TwoFAController {
       req.body.recoveryCode
     );
     res.cookie("refresh-token", refreshToken, standardCookieOptions);
-    res.status(200).json({ accessToken });
+    res.status(200).json({ accessToken, message: "2FA verification success." });
   });
 
   public initiate = asyncHandler(async (req: Request, res: Response) => {
