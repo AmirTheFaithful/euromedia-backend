@@ -135,7 +135,7 @@ export class AuthUseCase {
 
       return payload.id;
     } catch (error: any) {
-      throw new BadRequestError(
+      throw new UnauthorizedError(
         `Token verification error: ${error.name} - "${error.message}"`
       );
     }
