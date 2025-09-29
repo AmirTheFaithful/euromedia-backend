@@ -363,6 +363,9 @@ export class Verify2FAUseCase extends AuthUseCase {
       throw new BadRequestError("No code provided.");
     }
 
+    if (twoFACode && recoveryCode)
+      throw new BadRequestError("Provide only single kind of code.");
+
     const parsed = this.schema.parse({ authHeader, twoFACode, recoveryCode });
     const pending2FAToken: string = this.readAuthHeader(parsed.authHeader);
     const userId: string = this.decodeUserId(pending2FAToken, "2fa_pending");
@@ -421,6 +424,18 @@ export class Verify2FAUseCase extends AuthUseCase {
     userId: string
   ): Promise<void> {
     const user: User = await this.checkExistance(userId, "id", "absence");
+
+    const now = new Date();
+    if (user.twoFA.lockedUntil && user.twoFA.lockedUntil > now) {
+      throw new UnauthorizedError(
+        `User ${user.meta.firstname} ${user.meta.lastname} is locked until ${user.twoFA.lockedUntil}`
+      );
+    }
+
+    // Means that the user not completed 2FA set up yet.
+    if (!user.twoFA.twoFASecret)
+      throw new UnauthorizedError("2FA is not set up.");
+
     if (totp) {
       await this.verify2FACode(totp, userId);
     } else if (recoveryCode) {
@@ -471,7 +486,14 @@ export class Verify2FAUseCase extends AuthUseCase {
       }
     }
 
-    throw new UnauthorizedError("Invalid TOTP token or recovery code.");
+    user.twoFA.failed2FAAttempts += 1;
+
+    if (user.twoFA.failed2FAAttempts > 5)
+      user.twoFA.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+
+    await user.save();
+
+    throw new UnauthorizedError("Invalid recovery code.");
   }
 
   /**
@@ -494,8 +516,12 @@ export class Verify2FAUseCase extends AuthUseCase {
     });
 
     if (!result) {
-      if (user.twoFA.failed2FAAttempts !== undefined)
-        user.twoFA.failed2FAAttempts += 1;
+      user.twoFA.failed2FAAttempts += 1;
+
+      if (user.twoFA.failed2FAAttempts > 5)
+        user.twoFA.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+
+      await user.save();
       throw new UnauthorizedError("Wrong 2FA token.");
     }
 
@@ -577,7 +603,7 @@ export class Initiate2FAUseCase extends AuthUseCase {
     const pending2FAToken: string = sign(
       { id: userId, type: "2fa_pending" },
       jwt.p2a,
-      { expiresIn: "720s" }
+      { expiresIn: "300s" }
     );
 
     return pending2FAToken;
