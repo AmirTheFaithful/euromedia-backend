@@ -25,7 +25,7 @@ jest.setTimeout(16000); // Increase testing estimated timeout.
 const dummyCredentials = {
   firstname: "Francois",
   lastname: "De Blanches",
-  email: "franco@test.euro",
+  email: "franco@test.euro.fr",
   password: "xyz123abc789",
 };
 

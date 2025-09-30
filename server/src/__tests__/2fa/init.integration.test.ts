@@ -18,10 +18,10 @@ jest.setTimeout(16000); // Increase testing estimated timeout.
 
 // Would be used everywhere in the file-scope.
 const dummyCredentials = {
-  firstname: "Hannah",
-  lastname: "Cybermann",
-  email: "hannah@test.euro.au",
-  password: "Das_einfaches_leben_561",
+  firstname: "Aino",
+  lastname: "Korhonen",
+  email: "aino_korhonen@test.euro.fi",
+  password: "Turku_2016",
 };
 
 let pending2FAToken: string;
