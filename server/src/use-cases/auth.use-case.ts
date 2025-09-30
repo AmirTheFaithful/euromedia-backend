@@ -130,7 +130,7 @@ export class AuthUseCase {
 
       const payload: JwtPayload = verify(token, jwt_key) as JwtPayload;
       if (payload.type !== expectedType) {
-        throw new BadRequestError("Wrong token type.");
+        throw new UnauthorizedError("Wrong token type.");
       }
 
       return payload.id;
