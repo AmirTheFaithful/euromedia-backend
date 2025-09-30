@@ -594,7 +594,12 @@ export class Initiate2FAUseCase extends AuthUseCase {
     // Ensure the user exists in the database.
     const user: User = await this.checkExistance(userId, "id", "absence");
 
-    // Prevent enabling 2FA if it's already active
+    // Prevent enabling 2FA if it is already in progress to be verified.
+    if (user.twoFA.twoFASecret) {
+      throw new BadRequestError("2FA setup already in progress.");
+    }
+
+    // Prevent enabling 2FA if it is already verified and setup.
     if (user.twoFA.is2FASetUp) {
       throw new BadRequestError("2FA is already setup.");
     }
