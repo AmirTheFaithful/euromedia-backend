@@ -17,7 +17,6 @@ let testApp: Application;
 // A JWTs that plays a crucial role in all test-cases.
 let pending2FAToken: string;
 let accessToken: string;
-let refreshToken: string;
 
 jest.setTimeout(16000); // Increase testing estimated timeout.
 
