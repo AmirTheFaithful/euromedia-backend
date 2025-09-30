@@ -140,7 +140,7 @@ describe("POST /auth/2fa/setup", (): void => {
         Authorization: "Bearer " + invalidToken,
       });
 
-    expect(twoFASetUpResponse.statusCode).toBe(400);
+    expect(twoFASetUpResponse.statusCode).toBe(401);
     expect(twoFASetUpResponse.body.message).toBe(
       'Token verification error: JsonWebTokenError - "invalid token"'
     );
