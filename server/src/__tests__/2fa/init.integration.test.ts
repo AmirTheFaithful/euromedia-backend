@@ -1,4 +1,4 @@
-import request, { Response } from "supertest";
+import { Response } from "supertest";
 import { Application } from "express";
 import { JwtPayload, sign, verify } from "jsonwebtoken";
 import { ObjectId } from "mongodb";
@@ -8,14 +8,11 @@ import {
   initiate2FA,
   setup2FA,
   deinit2FA,
+  prepareRegisterScenario,
 } from "../../utils/prepareAuthScenarios";
 import { jwt } from "../../config/env";
 
 let testApp: Application;
-
-// A JWTs that plays a crucial role in all test-cases.
-let pending2FAToken: string;
-let accessToken: string;
 
 jest.setTimeout(16000); // Increase testing estimated timeout.
 
@@ -27,37 +24,14 @@ const dummyCredentials = {
   password: "Das_einfaches_leben_561",
 };
 
-const prepareScenario = async () => {
-  // 1. Complete registration process.
-  await request(testApp).post("/auth/register").send(dummyCredentials);
-
-  // 2. Complete login process.
-  const loginResponse: Response = await request(testApp)
-    .post("/auth/login")
-    .send({
-      email: dummyCredentials.email,
-      password: dummyCredentials.password,
-    });
-
-  // Retrieve access and refresh two Bearer tokens
-  // First - from login response body.
-  // Second - from cookies set when login proccess.
-  accessToken = loginResponse.body.accessToken;
-
-  // 3. Initiate 2FA.
-  const twoFAInitializationResponse: Response = await request(testApp)
-    .patch("/auth/2fa/initiate")
-    .set({
-      "X-access-token": "Bearer " + accessToken,
-    });
-
-  // Retrieve pending 2FA Bearer token and set it to the global same-named variable.
-  pending2FAToken = twoFAInitializationResponse.body.pending2FAToken;
-};
+let pending2FAToken: string;
+let accessToken: string;
 
 beforeAll(async () => {
   testApp = app();
-  await prepareScenario();
+  const result = await prepareRegisterScenario(testApp, dummyCredentials);
+  accessToken = result.accessToken;
+  pending2FAToken = result.pending2FAToken;
 });
 
 describe("POST /auth/2fa/initiate", () => {
