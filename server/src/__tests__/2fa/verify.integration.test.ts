@@ -297,8 +297,8 @@ describe("POST /auth/2fa/verify", () => {
       step: 30,
     });
 
-    // Sleep for 40s to force expiration, as verification has window of 1.
-    MockDate.set(new Date(Date.now() + 40 * 1000));
+    // Sleep for one minute to force expiration, as verification has window of 1.
+    MockDate.set(new Date(Date.now() + 60 * 1000));
 
     // 3. Attempt verification with expired code.
     const response = await verify2FA(testApp, pending2FAToken, expiredCode);
