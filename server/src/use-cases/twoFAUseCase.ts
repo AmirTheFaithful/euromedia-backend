@@ -664,6 +664,10 @@ export class Deinit2FAUseCase extends AuthUseCase {
     const userId = this.decodeUserId(accessToken, "access-token");
     const user = await this.checkExistance(userId, "id", "absence");
 
+    // Prevent double deinitializtion if user has not initialized 2FA process nor verified it (completed).
+    if (!user.twoFA.twoFASecret)
+      throw new BadRequestError("2FA is already inactive.");
+
     // Droping all the 2FA properties and save user obbject with nullified 2FA options.
     user.twoFA.is2FASetUp = false;
     user.twoFA.twoFASecret = undefined;
