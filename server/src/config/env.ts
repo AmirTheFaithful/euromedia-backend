@@ -11,6 +11,7 @@ export const sys = {
   clntPort: process.env.CLIENT_PORT!,
   host: process.env.HOST!,
   node_env: process.env.NODE_ENV!,
+  log_level: process.env.LOG_LEVEL!,
 };
 
 export const mongo = {
