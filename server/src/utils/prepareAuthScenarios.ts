@@ -28,9 +28,18 @@ export const verify2FA = async (
     .send({ recoveryCode });
 };
 
+export const initiate2FA = async (
+  testApp: Application,
+  accessToken?: string
+): Promise<Response> => {
+  return await request(testApp)
+    .patch("/auth/2fa/initiate")
+    .set({ "X-access-token": "Bearer " + accessToken });
+};
+
 export const deinit2FA = async (
   testApp: Application,
-  accessToken: string
+  accessToken?: string
 ): Promise<Response> => {
   return await request(testApp)
     .patch("/auth/2fa/deinit")
