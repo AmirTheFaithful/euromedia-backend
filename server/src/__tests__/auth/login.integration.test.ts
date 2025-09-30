@@ -74,6 +74,6 @@ describe("POST auth/login", () => {
       .send(loginCredentials);
 
     expect(loginResponse.statusCode).toBe(404);
-    expect(loginResponse.body.message).toBe("Not found.");
+    expect(loginResponse.body.message).toBe("User not found.");
   });
 });
