@@ -52,7 +52,7 @@ export class AuthUseCase {
     } else {
       if (issue === "absence") {
         if (!existingUser) {
-          throw new NotFoundError();
+          throw new NotFoundError("User not found.");
         }
       }
     }
