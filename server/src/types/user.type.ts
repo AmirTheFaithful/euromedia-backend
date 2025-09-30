@@ -15,6 +15,7 @@ import { Document } from "mongoose";
 export interface User extends Document {
   meta: UserMeta;
   auth: UserAuth;
+  twoFA: User2FA;
   location?: UserLocation;
 }
 
@@ -51,6 +52,40 @@ export interface UserAuth {
   email: string;
   password: string;
   verified?: boolean;
+}
+
+/**
+ * Represents the encrypted secret used for two-factor authentication (2FA),
+ * stored using AES encryption.
+ *
+ * @interface TwoFASecret
+ * @property {string} ciphertext - The encrypted value of the secret.
+ * @property {string} iv - The initialization vector used during encryption.
+ * @property {string} tag - The authentication tag for verifying data integrity.
+ */
+export interface TwoFASecret {
+  ciphertext: string;
+  iv: string;
+  tag: string;
+}
+
+/**
+ * User Two-Factor Authentication (2FA) settings.
+ *
+ * @interface User2FA
+ * @property {boolean} is2FASetUp - Indicates if 2FA is completed.
+ * @property {string} twoFASecret - Hashed TOTP secret.
+ * @property {Date} last2FAVerifiedAt - Last successful 2FA verification timestamp.
+ * @property {number} failed2FAAttempts - Consecutive failed 2FA attempts.
+ * @property {string[]} recoveryCodes - Recovery codes for 2FA fallback.
+ */
+export interface User2FA {
+  is2FASetUp: boolean;
+  twoFASecret?: TwoFASecret;
+  last2FAVerifiedAt?: Date;
+  lockedUntil?: Date;
+  failed2FAAttempts: number;
+  recoveryCodes: string[];
 }
 
 /**

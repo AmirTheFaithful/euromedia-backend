@@ -1,9 +1,9 @@
 import request, { Response } from "supertest";
 import { Application } from "express";
 
-import app from "../setup/app";
-import UserModel from "../models/user.model";
-import { User } from "../types/user.type";
+import app from "../../setup/app";
+import UserModel from "../../models/user.model";
+import { User } from "../../types/user.type";
 
 // Initialize mock app and model.
 let testApp: Application;

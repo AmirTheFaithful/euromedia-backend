@@ -28,11 +28,22 @@ export class AuthUseCase {
 
   constructor(@inject(UserService) protected readonly service: UserService) {}
 
-  protected async checkExistence(
-    email: string,
+  protected async checkExistance(
+    key: string,
+    keyType: "id" | "email",
     issue: "conflict" | "absence"
-  ): Promise<never | User> {
-    const existingUser = await this.service.getUserByEmail(email);
+  ): Promise<User> {
+    let existingUser: User | null;
+
+    if (keyType === "id") {
+      if (ObjectId.isValid(key)) {
+        existingUser = await this.service.getUserById(new ObjectId(key));
+      } else {
+        throw new BadRequestError("Invalid id value.");
+      }
+    } else {
+      existingUser = await this.service.getUserByEmail(key);
+    }
 
     if (issue === "conflict") {
       if (existingUser) {
@@ -41,7 +52,7 @@ export class AuthUseCase {
     } else {
       if (issue === "absence") {
         if (!existingUser) {
-          throw new NotFoundError();
+          throw new NotFoundError("User not found.");
         }
       }
     }
@@ -53,8 +64,12 @@ export class AuthUseCase {
     refreshToken: string;
     accessToken: string;
   } {
-    const refreshToken: string = sign({ id }, jwt.rfs, { expiresIn: "30d" });
-    const accessToken: string = sign({ id }, jwt.acs, { expiresIn: "15m" });
+    const refreshToken: string = sign({ id, type: "refresh-token" }, jwt.rfs, {
+      expiresIn: "30d",
+    });
+    const accessToken: string = sign({ id, type: "access-token" }, jwt.acs, {
+      expiresIn: "300s",
+    });
 
     return { refreshToken, accessToken };
   }
@@ -63,6 +78,67 @@ export class AuthUseCase {
     const saltRounds: number = 12;
     const salt: string = await genSalt(saltRounds);
     return await hash(password, salt);
+  }
+
+  /**
+   * Extracts and validates a bearer token from the given authorization header.
+   *
+   * @protected
+   * @param {string | undefined} header - The raw `Authorization` header value (e.g. `"Bearer <token>"`).
+   * @returns {string} The extracted token if the header is valid.
+   *
+   * @throws {BadRequestError} If the header is missing, not a string, does not use the `Bearer` scheme, or
+   *                           does not contain a token.
+   */
+  protected readAuthHeader(header: string | undefined): string {
+    if (!header || typeof header !== "string") {
+      throw new BadRequestError("Invalid header.");
+    }
+
+    const [scheme, token] = header.split(" ");
+    if (scheme !== "Bearer" || !token) {
+      throw new BadRequestError("Invalid header scheme or missing token.");
+    }
+
+    return token;
+  }
+
+  /**
+   * Decodes and validates a user ID from the pending 2FA token.
+   *
+   * @protected
+   * @param {string} token The pending 2FA JWT token.
+   * @param {"access-token" | "refresh-token" | "2fa_pending"} expectedType System-defined type of the given JWT token.
+   * @returns {string} Extracted user ID.
+   * @throws {BadRequestError} If the token is invalid or not of type `2fa_pending`.
+   */
+  protected decodeUserId(
+    token: string,
+    expectedType: "access-token" | "refresh-token" | "2fa_pending"
+  ): string {
+    try {
+      // Select the correct secret key based on the expected token type.
+      // - `access-token` → signed with `jwt.acs`
+      // - `2fa_pending` → signed with `jwt.p2a`
+      // - `refresh-token` not handled here (validated elsewhere in the auth flow)
+      let jwt_key: string = "";
+      if (expectedType === "access-token") {
+        jwt_key = jwt.acs;
+      } else if (expectedType === "2fa_pending") {
+        jwt_key = jwt.p2a;
+      }
+
+      const payload: JwtPayload = verify(token, jwt_key) as JwtPayload;
+      if (payload.type !== expectedType) {
+        throw new UnauthorizedError("Wrong token type.");
+      }
+
+      return payload.id;
+    } catch (error: any) {
+      throw new UnauthorizedError(
+        `Token verification error: ${error.name} - "${error.message}"`
+      );
+    }
   }
 }
 
@@ -77,7 +153,7 @@ export class RegisterUseCase extends AuthUseCase {
     const { email } = parsed;
 
     // Check if provided email is already registered.
-    await this.checkExistence(email, "conflict");
+    await this.checkExistance(email, "email", "conflict");
 
     // Create a new user account into DB:
     const newUserID = await this.createInstance(parsed);
@@ -219,7 +295,7 @@ export class ResetPasswordRequestUseCase extends AuthUseCase {
     const { email } = this.schema.parse(input);
 
     // If the user exists, assign to global user object and continue, throw "not found" error otherwise.
-    this.user = await this.checkExistence(email, "absence");
+    this.user = await this.checkExistance(email, "email", "absence");
 
     // Generate token to be verified on password reset.
     const token: string = sign({ id: this.user._id }, jwt.eml, {
@@ -261,19 +337,23 @@ export class ResetPasswordUseCase extends AuthUseCase {
 
   public async execute(input: LoginRequestBody, headers: IncomingHttpHeaders) {
     const { email, password } = this.loginSchema.parse(input);
-    const emailUser: User = await this.checkExistence(email, "absence");
+    const emailUser: User = await this.checkExistance(
+      email,
+      "email",
+      "absence"
+    );
 
     if (!emailUser) {
       throw new NotFoundError(`User not found with email '${email}'.`);
     }
 
-    const token = headers["authorization"];
+    const token = headers["authorization"] as string;
 
     if (!token) {
       throw new UnauthorizedError("Verification token missing.");
     }
 
-    const payload = verify(token, jwt.eml) as JwtPayload;
+    const payload = verify(token.split(" ")[1], jwt.eml) as JwtPayload;
     const id: ObjectId = payload.id;
 
     const idUser = await this.service.getUserById(id);
@@ -297,13 +377,11 @@ export class LoginUseCase extends AuthUseCase {
   public async execute(input: LoginRequestBody) {
     const { email, password } = this.loginSchema.parse(input);
 
-    this.user = await this.checkExistence(email, "absence");
+    this.user = await this.checkExistance(email, "email", "absence");
 
     await this.comparePasswords(password, this.user.auth.password);
 
-    const tokens = this.generateTokens(this.user._id as ObjectId);
-
-    return tokens;
+    return this.decideStrategy();
   }
 
   private async comparePasswords(
@@ -314,6 +392,47 @@ export class LoginUseCase extends AuthUseCase {
 
     if (!match) {
       throw new UnauthorizedError("Incorrect password.");
+    }
+  }
+
+  private decideStrategy() {
+    let payload: string | { accessToken: string; refreshToken: string };
+
+    if (this.user?.twoFA.is2FASetUp) {
+      payload = sign({ id: this.user._id, type: "2fa_pending" }, jwt.p2a, {
+        expiresIn: "420s",
+      });
+    } else {
+      payload = this.generateTokens(this.user?._id as ObjectId);
+    }
+
+    return payload;
+  }
+}
+
+export class RefreshAccessToken extends AuthUseCase {
+  private readonly schema = z.string();
+
+  constructor(@inject(UserService) protected readonly service: UserService) {
+    super(service);
+  }
+
+  public async execute(refreshToken: string) {
+    const parsedToken: string = this.schema.parse(refreshToken);
+
+    try {
+      const payload = verify(parsedToken, jwt.rfs) as JwtPayload;
+      const userId: string = payload.id;
+      const user: User = await this.checkExistance(userId, "id", "absence");
+      if (!user) {
+        throw new NotFoundError("User not found.");
+      }
+
+      return sign({ id: userId, type: "access-token" }, jwt.acs, {
+        expiresIn: "300s",
+      });
+    } catch (error) {
+      throw new UnauthorizedError("Token verification error.");
     }
   }
 }

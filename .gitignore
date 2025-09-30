@@ -7,3 +7,5 @@ server/.env
 
 # macOS system file.
 .DS_Store
+
+logs

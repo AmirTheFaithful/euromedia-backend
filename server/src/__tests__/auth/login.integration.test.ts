@@ -1,7 +1,7 @@
 import request, { Response } from "supertest";
 import { Application } from "express";
 
-import app from "../setup/app";
+import app from "../../setup/app";
 
 let testApp: Application;
 
@@ -74,6 +74,6 @@ describe("POST auth/login", () => {
       .send(loginCredentials);
 
     expect(loginResponse.statusCode).toBe(404);
-    expect(loginResponse.body.message).toBe("Not found.");
+    expect(loginResponse.body.message).toBe("User not found.");
   });
 });

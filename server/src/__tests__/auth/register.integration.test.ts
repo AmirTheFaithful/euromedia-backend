@@ -1,7 +1,7 @@
 import request, { Response } from "supertest";
 import { Application } from "express";
 
-import app from "../setup/app";
+import app from "../../setup/app";
 
 // Initialize an instance of Express's app for mocking.
 let testApp: Application;
@@ -182,6 +182,6 @@ describe("POST auth/register", () => {
       .send(validCredentials);
 
     expect(response.statusCode).toBe(409);
-    expect(response.body.message).toBe("User exists.");
+    expect(response.body.message).toBe("Document exists.");
   });
 });
