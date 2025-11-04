@@ -1,8 +1,8 @@
-# 🇪🇺 Euro – The Social Network That Actually Makes Sense
+# 🇪🇺 Euro – The Social Network Truly Built With Love ❤️
 
-> _Designed in Europe. Built with clarity. Backed by senior-level architecture._
+> _Designed in the Middle East. Built with clarity. Backed by enthusiasm and the eagerness of a single developer. Inspired by Europe._
 >
-> _"Social media, but with taste." – someone at a café in Copenhagen, probably._
+> _"Social media, but with fun and a vibe of art." – developer's idea._
 
 ---
 
@@ -21,24 +21,16 @@ It’s not a clone. It’s a **clean room rethink** – designed to feel fresh, 
 
 ## 🔧 Tech Stack (a.k.a. What’s Under the Hood)
 
-### Frontend
-
-- **React** + **TypeScript** (no magic, just logic)
-- **SCSS modules** (BEM-style, because we’re civilized)
-- **Tailwind CSS** _(in selective doses – minimalism matters)_
-
-### Backend
-
-- **Node.js** + **Express** + **TypeScript**
-- **Dependency Injection** architecture (`@injectable()` all the way 🚰)
-- **MongoDB** (flexible and pragmatic)
-- Clean Layering: `Model → Repository → Service → Use Case → Controller`
+- **Node.js** + **Express** + **TypeScript** — simple yet gracefully designed, like the streets of Copenhagen
+- **Dependency Injection** architecture (`@injectable()` all the way) — clean and refreshing, like alpine water 🚰
+- **MongoDB** — flexible and pragmatic like Swedish workday
+- **Clean Layering:** `Model → Repository → Service → Use Case → Controller` — strictly structured, like Europort in Rotterdam
 
 ---
 
 ## 🏛️ Architecture Philosophy
 
-> “Everything should be made as simple as possible, but no simpler.” – Einstein, or maybe your senior dev
+> “Everything should be made as simple as possible, but no simpler.” – Einstein.
 
 This project follows **clear separation of concerns**, scalable modules, and a _“don’t surprise your future self”_ coding style.  
 Every layer has its place – and no, business logic is not welcome in your controller, thank you very much.
@@ -49,7 +41,7 @@ Every layer has its place – and no, business logic is not welcome in your cont
 
 ```bash
 # clone the elegance
-git clone https://github.com/your-username/euro.git
+git clone https://github.com/AmirTheFaithful/euromedia-backend.git
 
 # install the essentials
 cd euro
